@@ -1,0 +1,183 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>CRM SaaS App</title>
+  <script src="https://unpkg.com/react@18/umd/react.development.js"></script>
+  <script src="https://unpkg.com/react-dom@18/umd/react-dom.development.js"></script>
+  <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          colors: {
+            primary: '#3B82F6',
+            secondary: '#10B981',
+            danger: '#EF4444',
+          }
+        }
+      }
+    }
+  </script>
+</head>
+<body class="bg-gray-100">
+<div id="root"></div>
+
+<script type="text/babel">
+  const { useState, useEffect } = React;
+
+  const Dashboard = () => {
+    const [stats, setStats] = useState({
+      contacts: 0,
+      deals: 0,
+      tasks: 0,
+      revenue: 0
+    });
+
+    useEffect(() => {
+      // Simulate fetching data
+      setTimeout(() => {
+        setStats({
+          contacts: 125,
+          deals: 42,
+          tasks: 18,
+          revenue: 52000
+        });
+      }, 1000);
+    }, []);
+
+    return (
+            <div class="p-6">
+              <h1 class="text-2xl font-bold mb-6">Dashboard</h1>
+              <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+                <div class="bg-white p-6 rounded-lg shadow">
+                  <h2 class="text-lg font-semibold text-gray-700">Contacts</h2>
+                  <p class="text-3xl font-bold text-primary mt-2">{stats.contacts}</p>
+                </div>
+                <div class="bg-white p-6 rounded-lg shadow">
+                  <h2 class="text-lg font-semibold text-gray-700">Deals</h2>
+                  <p class="text-3xl font-bold text-secondary mt-2">{stats.deals}</p>
+                </div>
+                <div class="bg-white p-6 rounded-lg shadow">
+                  <h2 class="text-lg font-semibold text-gray-700">Tasks</h2>
+                  <p class="text-3xl font-bold text-danger mt-2">{stats.tasks}</p>
+                </div>
+                <div class="bg-white p-6 rounded-lg shadow">
+                  <h2 class="text-lg font-semibold text-gray-700">Revenue</h2>
+                  <p class="text-3xl font-bold text-gray-800 mt-2">₪{stats.revenue.toLocaleString()}</p>
+                </div>
+              </div>
+            </div>
+    );
+  };
+
+  const Contacts = () => {
+    const [contacts, setContacts] = useState([]);
+    const [loading, setLoading] = useState(true);
+
+    useEffect(() => {
+      // Simulate fetching data
+      setTimeout(() => {
+        setContacts([
+          { id: 1, name: 'John Doe', email: 'john@example.com', phone: '050-1234567', company: 'Acme Inc' },
+          { id: 2, name: 'Jane Smith', email: 'jane@example.com', phone: '052-9876543', company: 'Globex Corp' },
+          { id: 3, name: 'Bob Johnson', email: 'bob@example.com', phone: '054-5678901', company: 'Initech' },
+          { id: 4, name: 'Alice Williams', email: 'alice@example.com', phone: '050-3456789', company: 'Umbrella Corp' },
+          { id: 5, name: 'Charlie Brown', email: 'charlie@example.com', phone: '052-7654321', company: 'Wayne Enterprises' },
+        ]);
+        setLoading(false);
+      }, 1000);
+    }, []);
+
+    if (loading) {
+      return <div class="p-6">Loading contacts...</div>;
+    }
+
+    return (
+            <div class="p-6">
+              <h1 class="text-2xl font-bold mb-6">Contacts</h1>
+              <div class="bg-white rounded-lg shadow overflow-hidden">
+                <table class="min-w-full divide-y divide-gray-200">
+                  <thead class="bg-gray-50">
+                  <tr>
+                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Name</th>
+                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Email</th>
+                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Phone</th>
+                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Company</th>
+                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Actions</th>
+                  </tr>
+                  </thead>
+                  <tbody class="bg-white divide-y divide-gray-200">
+                  {contacts.map(contact => (
+                          <tr key={contact.id}>
+                            <td class="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">{contact.name}</td>
+                            <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{contact.email}</td>
+                            <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{contact.phone}</td>
+                            <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{contact.company}</td>
+                            <td class="px-6 py-4 whitespace-nowrap text-sm font-medium">
+                              <button class="text-primary hover:text-primary-700 mr-2">Edit</button>
+                              <button class="text-danger hover:text-danger-700">Delete</button>
+                            </td>
+                          </tr>
+                  ))}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+    );
+  };
+
+  const App = () => {
+    const [activeTab, setActiveTab] = useState('dashboard');
+
+    const renderContent = () => {
+      switch (activeTab) {
+        case 'dashboard':
+          return <Dashboard />;
+        case 'contacts':
+          return <Contacts />;
+        default:
+          return <Dashboard />;
+      }
+    };
+
+    return (
+            <div class="flex h-screen bg-gray-100">
+              {/* Sidebar */}
+              <div class="w-64 bg-white shadow-md">
+                <div class="p-6">
+                  <h1 class="text-2xl font-bold text-primary">CRM SaaS</h1>
+                </div>
+                <nav class="mt-6">
+                  <button
+                          onClick={() => setActiveTab('dashboard')}
+                          class={`flex items-center px-6 py-3 w-full text-left ${activeTab === 'dashboard' ? 'bg-primary text-white' : 'text-gray-700 hover:bg-gray-100'}`}
+                  >
+                    <span class="mr-3">📊</span> Dashboard
+                  </button>
+                  <button
+                          onClick={() => setActiveTab('contacts')}
+                          class={`flex items-center px-6 py-3 w-full text-left ${activeTab === 'contacts' ? 'bg-primary text-white' : 'text-gray-700 hover:bg-gray-100'}`}
+                  >
+                    <span class="mr-3">👥</span> Contacts
+                  </button>
+                </nav>
+              </div>
+
+              {/* Main Content */}
+              <div class="flex-1 overflow-auto">
+                <div class="p-6">
+                  {renderContent()}
+                </div>
+              </div>
+            </div>
+    );
+  };
+
+  const root = ReactDOM.createRoot(document.getElementById('root'));
+  root.render(<App />);
+</script>
+</body>
+</html>

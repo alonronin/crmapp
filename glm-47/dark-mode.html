@@ -1,0 +1,710 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>NexusCRM - Basic SaaS CRM</title>
+
+  <!-- React & ReactDOM -->
+  <script crossorigin src="https://unpkg.com/react@18/umd/react.development.js"></script>
+  <script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.development.js"></script>
+
+  <!-- Babel Standalone -->
+  <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+
+  <!-- Tailwind CSS -->
+  <script src="https://cdn.tailwindcss.com"></script>
+
+  <!-- Phosphor Icons -->
+  <script src="https://unpkg.com/@phosphor-icons/web"></script>
+
+  <!-- Google Fonts -->
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+
+  <script>
+    tailwind.config = {
+      darkMode: 'class', // Enable class-based dark mode
+      theme: {
+        extend: {
+          fontFamily: {
+            sans: ['Inter', 'sans-serif'],
+          },
+          colors: {
+            primary: {
+              50: '#eff6ff',
+              100: '#dbeafe',
+              500: '#3b82f6',
+              600: '#2563eb',
+              700: '#1d4ed8',
+            }
+          }
+        }
+      }
+    }
+  </script>
+
+  <style>
+    /* Custom scrollbar */
+    ::-webkit-scrollbar {
+      width: 8px;
+      height: 8px;
+    }
+    ::-webkit-scrollbar-track {
+      background: transparent;
+    }
+    ::-webkit-scrollbar-thumb {
+      background: #cbd5e1;
+      border-radius: 4px;
+    }
+    .dark ::-webkit-scrollbar-thumb {
+      background: #475569;
+    }
+    .dark ::-webkit-scrollbar-thumb:hover {
+      background: #64748b;
+    }
+
+    .fade-in {
+      animation: fadeIn 0.3s ease-in-out;
+    }
+
+    @keyframes fadeIn {
+      from { opacity: 0; transform: translateY(10px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+  </style>
+</head>
+<body class="bg-slate-50 text-slate-800 dark:bg-slate-900 dark:text-slate-100 antialiased h-screen overflow-hidden flex flex-col transition-colors duration-300">
+
+<div id="root" class="h-full flex"></div>
+
+<script type="text/babel">
+  const { useState, useEffect, useMemo } = React;
+
+  // --- Mock Data & Utilities ---
+
+  const generateId = () => Math.random().toString(36).substr(2, 9);
+
+  const initialContacts = [
+    { id: '1', name: 'Alice Johnson', email: 'alice@techcorp.com', company: 'TechCorp', status: 'Customer', value: 12500, lastContact: '2023-10-15' },
+    { id: '2', name: 'Bob Smith', email: 'bob@innovate.io', company: 'Innovate.io', status: 'Lead', value: 5400, lastContact: '2023-10-20' },
+    { id: '3', name: 'Charlie Davis', email: 'charlie@logistics.com', company: 'Global Logistics', status: 'Customer', value: 32000, lastContact: '2023-10-18' },
+    { id: '4', name: 'Diana Prince', email: 'diana@amazonia.com', company: 'Amazonia', status: 'Churned', value: 800, lastContact: '2023-09-01' },
+    { id: '5', name: 'Evan Wright', email: 'evan@startuplab.com', company: 'StartupLab', status: 'Lead', value: 15000, lastContact: '2023-10-22' },
+  ];
+
+  const initialDeals = [
+    { id: 'd1', title: 'Enterprise License', contactId: '1', stage: 'Proposal', value: 12500, probability: 75 },
+    { id: 'd2', title: 'Q4 Marketing Push', contactId: '2', stage: 'Qualification', value: 5400, probability: 20 },
+    { id: 'd3', title: 'Annual Contract Renewal', contactId: '3', stage: 'Negotiation', value: 32000, probability: 90 },
+  ];
+
+  const formatCurrency = (val) => new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD', maximumFractionDigits: 0 }).format(val);
+
+  // --- Components ---
+
+  const Sidebar = ({ activeView, setActiveView, isDarkMode }) => {
+    const navItems = [
+      { id: 'dashboard', label: 'Dashboard', icon: 'ph-squares-four' },
+      { id: 'contacts', label: 'Contacts', icon: 'ph-users' },
+      { id: 'deals', label: 'Deals Pipeline', icon: 'ph-briefcase' },
+      { id: 'settings', label: 'Settings', icon: 'ph-gear' },
+    ];
+
+    return (
+            <aside className={`w-64 text-white flex flex-col shadow-xl z-20 transition-all duration-300 hidden md:flex ${isDarkMode ? 'bg-slate-950' : 'bg-slate-900'}`}>
+              <div className="p-6 flex items-center space-x-3 border-b border-slate-800 dark:border-slate-900">
+                <div className="w-8 h-8 bg-blue-600 rounded-lg flex items-center justify-center">
+                  <i className="ph ph-hexagon text-xl"></i>
+                </div>
+                <h1 className="text-xl font-bold tracking-tight">NexusCRM</h1>
+              </div>
+
+              <nav className="flex-1 px-4 py-6 space-y-2">
+                {navItems.map(item => (
+                        <button
+                                key={item.id}
+                                onClick={() => setActiveView(item.id)}
+                                className={`w-full flex items-center space-x-3 px-4 py-3 rounded-lg transition-colors duration-200 ${
+                                        activeView === item.id
+                                                ? 'bg-blue-600 text-white shadow-md'
+                                                : 'text-slate-400 hover:bg-slate-800 hover:text-white dark:hover:bg-slate-900'
+                                }`}
+                        >
+                          <i className={`ph ${item.icon} text-lg`}></i>
+                          <span className="font-medium">{item.label}</span>
+                        </button>
+                ))}
+              </nav>
+
+              <div className="p-4 border-t border-slate-800 dark:border-slate-900">
+                <div className="flex items-center space-x-3">
+                  <img src="https://picsum.photos/seed/admin/40/40" alt="User" className="w-10 h-10 rounded-full border-2 border-slate-700" />
+                  <div>
+                    <p className="text-sm font-medium text-white">Jane Admin</p>
+                    <p className="text-xs text-slate-500">Sales Manager</p>
+                  </div>
+                </div>
+              </div>
+            </aside>
+    );
+  };
+
+  const Topbar = ({ toggleSidebar, activeView, setViewTitle, isDarkMode }) => {
+    const [searchTerm, setSearchTerm] = useState("");
+
+    useEffect(() => {
+      const titles = {
+        dashboard: "Dashboard Overview",
+        contacts: "Contact Management",
+        deals: "Sales Pipeline",
+        settings: "System Settings"
+      };
+      setViewTitle(titles[activeView] || "CRM");
+    }, [activeView, setViewTitle]);
+
+    return (
+            <header className={`h-16 border-b flex items-center justify-between px-6 shadow-sm z-10 transition-colors duration-300 ${isDarkMode ? 'bg-slate-900 border-slate-800' : 'bg-white border-slate-200'}`}>
+              <div className="flex items-center space-x-4">
+                <button onClick={toggleSidebar} className={`md:hidden p-2 rounded-lg ${isDarkMode ? 'hover:bg-slate-800 text-slate-400' : 'hover:bg-slate-100 text-slate-500'}`}>
+                  <i className="ph ph-list text-2xl"></i>
+                </button>
+                <div className="relative hidden sm:block">
+                  <i className="ph ph-magnifying-glass absolute left-3 top-1/2 transform -translate-y-1/2 text-slate-400"></i>
+                  <input
+                          type="text"
+                          placeholder="Search contacts, deals..."
+                          className={`pl-10 pr-4 py-2 rounded-full text-sm w-64 focus:ring-2 focus:ring-blue-500 focus:outline-none transition-all ${isDarkMode ? 'bg-slate-800 text-slate-200 border border-transparent focus:border-blue-500 placeholder-slate-500' : 'bg-slate-100 border-none focus:bg-white'}`}
+                          value={searchTerm}
+                          onChange={(e) => setSearchTerm(e.target.value)}
+                  />
+                </div>
+              </div>
+
+              <div className="flex items-center space-x-4">
+                <button className={`relative p-2 rounded-full transition-colors ${isDarkMode ? 'hover:bg-slate-800 text-slate-400' : 'hover:bg-slate-100 text-slate-500'}`}>
+                  <i className="ph ph-bell text-xl"></i>
+                  <span className="absolute top-2 right-2 w-2 h-2 bg-red-500 rounded-full border border-white dark:border-slate-900"></span>
+                </button>
+              </div>
+            </header>
+    );
+  };
+
+  const Dashboard = ({ contacts, deals, isDarkMode }) => {
+    const totalRevenue = contacts.filter(c => c.status === 'Customer').reduce((acc, curr) => acc + curr.value, 0);
+    const activeLeads = contacts.filter(c => c.status === 'Lead').length;
+    const activeDealsValue = deals.reduce((acc, curr) => acc + curr.value, 0);
+
+    return (
+            <div className="p-6 space-y-6 fade-in max-w-7xl mx-auto w-full">
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                <StatCard title="Total Revenue" value={formatCurrency(totalRevenue)} icon="ph-currency-dollar" color="bg-emerald-500" trend="+12%" isDarkMode={isDarkMode} />
+                <StatCard title="Active Leads" value={activeLeads} icon="ph-user-plus" color="bg-blue-500" trend="+5%" isDarkMode={isDarkMode} />
+                <StatCard title="Pipeline Value" value={formatCurrency(activeDealsValue)} icon="ph-chart-line-up" color="bg-purple-500" trend="+2%" isDarkMode={isDarkMode} />
+              </div>
+
+              <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                <div className={`p-6 rounded-xl shadow-sm border transition-colors ${isDarkMode ? 'bg-slate-800 border-slate-700' : 'bg-white border-slate-100'}`}>
+                  <h3 className={`text-lg font-semibold mb-4 ${isDarkMode ? 'text-white' : 'text-slate-800'}`}>Recent Contacts</h3>
+                  <div className="space-y-4">
+                    {contacts.slice(0, 3).map(contact => (
+                            <div key={contact.id} className={`flex items-center justify-between p-3 rounded-lg transition-colors ${isDarkMode ? 'hover:bg-slate-700' : 'hover:bg-slate-50'}`}>
+                              <div className="flex items-center space-x-3">
+                                <div className={`w-10 h-10 rounded-full flex items-center justify-center font-bold ${isDarkMode ? 'bg-slate-700 text-slate-300' : 'bg-slate-200 text-slate-600'}`}>
+                                  {contact.name.charAt(0)}
+                                </div>
+                                <div>
+                                  <p className={`font-medium ${isDarkMode ? 'text-white' : 'text-slate-800'}`}>{contact.name}</p>
+                                  <p className={`text-xs ${isDarkMode ? 'text-slate-400' : 'text-slate-500'}`}>{contact.company}</p>
+                                </div>
+                              </div>
+                              <span className={`px-2 py-1 rounded-full text-xs font-medium border ${
+                                      contact.status === 'Customer' ? 'bg-emerald-100 text-emerald-700 border-emerald-200 dark:bg-emerald-900/30 dark:text-emerald-400 dark:border-emerald-800' :
+                                              contact.status === 'Lead' ? 'bg-blue-100 text-blue-700 border-blue-200 dark:bg-blue-900/30 dark:text-blue-400 dark:border-blue-800' :
+                                                      'bg-slate-100 text-slate-600 border-slate-200 dark:bg-slate-700 dark:text-slate-400 dark:border-slate-600'
+                              }`}>
+                                            {contact.status}
+                                        </span>
+                            </div>
+                    ))}
+                  </div>
+                </div>
+
+                <div className={`p-6 rounded-xl shadow-sm border transition-colors ${isDarkMode ? 'bg-slate-800 border-slate-700' : 'bg-white border-slate-100'}`}>
+                  <h3 className={`text-lg font-semibold mb-4 ${isDarkMode ? 'text-white' : 'text-slate-800'}`}>Tasks & Reminders</h3>
+                  <div className="space-y-3">
+                    {['Follow up with Alice regarding contract', 'Prepare proposal for StartupLab', 'Update Q4 forecast'].map((task, idx) => (
+                            <div key={idx} className={`flex items-center space-x-3 p-3 rounded-lg border ${isDarkMode ? 'bg-slate-700/50 border-slate-700' : 'bg-slate-50 border-slate-100'}`}>
+                              <input type="checkbox" className="w-4 h-4 text-blue-600 rounded border-gray-300 focus:ring-blue-500" />
+                              <span className={`text-sm ${isDarkMode ? 'text-slate-300' : 'text-slate-700'}`}>{task}</span>
+                            </div>
+                    ))}
+                    <button className={`w-full mt-4 py-2 rounded-lg text-sm transition-all ${isDarkMode ? 'border-slate-700 text-slate-400 hover:bg-slate-700 hover:border-blue-500 hover:text-blue-400' : 'border-dashed border-slate-300 text-slate-500 hover:bg-slate-50 hover:border-blue-400 hover:text-blue-500'}`}>
+                      + Add New Task
+                    </button>
+                  </div>
+                </div>
+              </div>
+            </div>
+    );
+  };
+
+  const StatCard = ({ title, value, icon, color, trend, isDarkMode }) => (
+          <div className={`p-6 rounded-xl shadow-sm border relative overflow-hidden group transition-colors ${isDarkMode ? 'bg-slate-800 border-slate-700' : 'bg-white border-slate-100'}`}>
+            <div className={`absolute -right-4 -top-4 w-24 h-24 rounded-full opacity-10 group-hover:opacity-20 transition-opacity ${color}`}></div>
+            <div className="flex items-start justify-between">
+              <div>
+                <p className="text-sm font-medium uppercase tracking-wider opacity-70">{title}</p>
+                <h3 className={`text-3xl font-bold mt-1 ${isDarkMode ? 'text-white' : 'text-slate-800'}`}>{value}</h3>
+              </div>
+              <div className={`p-3 rounded-lg ${color} bg-opacity-10`}>
+                <i className={`ph ${icon} text-2xl ${color.replace('bg-', 'text-')}`}></i>
+              </div>
+            </div>
+            <div className="mt-4 flex items-center text-sm">
+                    <span className="text-emerald-500 font-medium flex items-center">
+                        <i className="ph ph-trend-up mr-1"></i> {trend}
+                    </span>
+              <span className={`ml-2 ${isDarkMode ? 'text-slate-500' : 'text-slate-400'}`}>from last month</span>
+            </div>
+          </div>
+  );
+
+  const Contacts = ({ contacts, setContacts, isDarkMode }) => {
+    const [isModalOpen, setIsModalOpen] = useState(false);
+    const [editingContact, setEditingContact] = useState(null);
+    const [formData, setFormData] = useState({ name: '', email: '', company: '', status: 'Lead', value: '' });
+
+    const openAddModal = () => {
+      setEditingContact(null);
+      setFormData({ name: '', email: '', company: '', status: 'Lead', value: '' });
+      setIsModalOpen(true);
+    };
+
+    const openEditModal = (contact) => {
+      setEditingContact(contact);
+      setFormData({ ...contact, value: contact.value.toString() });
+      setIsModalOpen(true);
+    };
+
+    const handleSave = (e) => {
+      e.preventDefault();
+      if (editingContact) {
+        setContacts(contacts.map(c => c.id === editingContact.id ? { ...formData, id: c.id, value: Number(formData.value) } : c));
+      } else {
+        setContacts([...contacts, { ...formData, id: generateId(), value: Number(formData.value), lastContact: new Date().toISOString().split('T')[0] }]);
+      }
+      setIsModalOpen(false);
+    };
+
+    const handleDelete = (id) => {
+      if(confirm("Are you sure you want to delete this contact?")) {
+        setContacts(contacts.filter(c => c.id !== id));
+      }
+    };
+
+    return (
+            <div className="p-6 fade-in h-full flex flex-col">
+              <div className="flex justify-between items-center mb-6">
+                <h2 className={`text-2xl font-bold ${isDarkMode ? 'text-white' : 'text-slate-800'}`}>Contacts ({contacts.length})</h2>
+                <button
+                        onClick={openAddModal}
+                        className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg flex items-center space-x-2 shadow-sm transition-colors"
+                >
+                  <i className="ph ph-plus-circle text-lg"></i>
+                  <span>Add Contact</span>
+                </button>
+              </div>
+
+              <div className={`rounded-xl shadow-sm border overflow-hidden flex-1 flex flex-col transition-colors ${isDarkMode ? 'bg-slate-800 border-slate-700' : 'bg-white border-slate-200'}`}>
+                <div className="overflow-x-auto">
+                  <table className="w-full text-left border-collapse">
+                    <thead className={`${isDarkMode ? 'bg-slate-900/50 border-slate-700 text-slate-400' : 'bg-slate-50 border-b border-slate-200 text-slate-500'} text-xs uppercase tracking-wider`}>
+                    <tr>
+                      <th className="p-4 font-semibold">Name</th>
+                      <th className="p-4 font-semibold">Company</th>
+                      <th className="p-4 font-semibold">Status</th>
+                      <th className="p-4 font-semibold text-right">Value</th>
+                      <th className="p-4 font-semibold text-right">Actions</th>
+                    </tr>
+                    </thead>
+                    <tbody className={`divide-y ${isDarkMode ? 'divide-slate-700' : 'divide-slate-100'}`}>
+                    {contacts.map(contact => (
+                            <tr key={contact.id} className={`transition-colors group ${isDarkMode ? 'hover:bg-slate-700/50' : 'hover:bg-slate-50'}`}>
+                              <td className="p-4">
+                                <div className={`font-medium ${isDarkMode ? 'text-white' : 'text-slate-800'}`}>{contact.name}</div>
+                                <div className={`text-xs ${isDarkMode ? 'text-slate-500' : 'text-slate-500'}`}>{contact.email}</div>
+                              </td>
+                              <td className={`p-4 ${isDarkMode ? 'text-slate-300' : 'text-slate-600'}`}>{contact.company}</td>
+                              <td className="p-4">
+                                                <span className={`px-2.5 py-1 rounded-full text-xs font-medium border ${
+                                                        contact.status === 'Customer' ? 'bg-emerald-50 text-emerald-700 border-emerald-100 dark:bg-emerald-900/30 dark:text-emerald-400 dark:border-emerald-800' :
+                                                                contact.status === 'Lead' ? 'bg-blue-50 text-blue-700 border-blue-100 dark:bg-blue-900/30 dark:text-blue-400 dark:border-blue-800' :
+                                                                        'bg-slate-50 text-slate-600 border-slate-100 dark:bg-slate-700 dark:text-slate-400 dark:border-slate-600'
+                                                }`}>
+                                                    {contact.status}
+                                                </span>
+                              </td>
+                              <td className={`p-4 text-right font-medium ${isDarkMode ? 'text-slate-200' : 'text-slate-700'}`}>{formatCurrency(contact.value)}</td>
+                              <td className="p-4 text-right">
+                                <div className="flex items-center justify-end space-x-2 opacity-0 group-hover:opacity-100 transition-opacity">
+                                  <button onClick={() => openEditModal(contact)} className="p-1.5 text-blue-600 hover:bg-blue-50 dark:hover:bg-blue-900/30 rounded-md"><i className="ph ph-pencil-simple"></i></button>
+                                  <button onClick={() => handleDelete(contact.id)} className="p-1.5 text-red-600 hover:bg-red-50 dark:hover:bg-red-900/30 rounded-md"><i className="ph ph-trash"></i></button>
+                                </div>
+                              </td>
+                            </tr>
+                    ))}
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+
+              {isModalOpen && (
+                      <Modal
+                              title={editingContact ? "Edit Contact" : "Add New Contact"}
+                              onClose={() => setIsModalOpen(false)}
+                              isDarkMode={isDarkMode}
+                      >
+                        <form onSubmit={handleSave} className="space-y-4">
+                          <div>
+                            <label className={`block text-sm font-medium mb-1 ${isDarkMode ? 'text-slate-300' : 'text-slate-700'}`}>Full Name</label>
+                            <input required type="text" className={`w-full px-3 py-2 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition-colors ${isDarkMode ? 'bg-slate-700 border-slate-600 text-white' : 'bg-white border-slate-300'}`}
+                                   value={formData.name} onChange={e => setFormData({...formData, name: e.target.value})} />
+                          </div>
+                          <div className="grid grid-cols-2 gap-4">
+                            <div>
+                              <label className={`block text-sm font-medium mb-1 ${isDarkMode ? 'text-slate-300' : 'text-slate-700'}`}>Email</label>
+                              <input required type="email" className={`w-full px-3 py-2 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition-colors ${isDarkMode ? 'bg-slate-700 border-slate-600 text-white' : 'bg-white border-slate-300'}`}
+                                     value={formData.email} onChange={e => setFormData({...formData, email: e.target.value})} />
+                            </div>
+                            <div>
+                              <label className={`block text-sm font-medium mb-1 ${isDarkMode ? 'text-slate-300' : 'text-slate-700'}`}>Company</label>
+                              <input required type="text" className={`w-full px-3 py-2 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition-colors ${isDarkMode ? 'bg-slate-700 border-slate-600 text-white' : 'bg-white border-slate-300'}`}
+                                     value={formData.company} onChange={e => setFormData({...formData, company: e.target.value})} />
+                            </div>
+                          </div>
+                          <div className="grid grid-cols-2 gap-4">
+                            <div>
+                              <label className={`block text-sm font-medium mb-1 ${isDarkMode ? 'text-slate-300' : 'text-slate-700'}`}>Status</label>
+                              <select className={`w-full px-3 py-2 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition-colors ${isDarkMode ? 'bg-slate-700 border-slate-600 text-white' : 'bg-white border-slate-300'}`}
+                                      value={formData.status} onChange={e => setFormData({...formData, status: e.target.value})}>
+                                <option value="Lead">Lead</option>
+                                <option value="Customer">Customer</option>
+                                <option value="Churned">Churned</option>
+                              </select>
+                            </div>
+                            <div>
+                              <label className={`block text-sm font-medium mb-1 ${isDarkMode ? 'text-slate-300' : 'text-slate-700'}`}>Estimated Value ($)</label>
+                              <input type="number" className={`w-full px-3 py-2 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition-colors ${isDarkMode ? 'bg-slate-700 border-slate-600 text-white' : 'bg-white border-slate-300'}`}
+                                     value={formData.value} onChange={e => setFormData({...formData, value: e.target.value})} />
+                            </div>
+                          </div>
+                          <div className="pt-4 flex justify-end space-x-3">
+                            <button type="button" onClick={() => setIsModalOpen(false)} className={`px-4 py-2 rounded-lg ${isDarkMode ? 'border-slate-600 text-slate-300 hover:bg-slate-700' : 'border-slate-300 text-slate-700 hover:bg-slate-50'}`}>Cancel</button>
+                            <button type="submit" className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700">Save Contact</button>
+                          </div>
+                        </form>
+                      </Modal>
+              )}
+            </div>
+    );
+  };
+
+  const Deals = ({ deals, contacts, setDeals, isDarkMode }) => {
+    const stages = ['Qualification', 'Proposal', 'Negotiation', 'Closed Won'];
+    const [isModalOpen, setIsModalOpen] = useState(false);
+    const [formData, setFormData] = useState({ title: '', contactId: '', stage: 'Qualification', value: '' });
+
+    const handleDragStart = (e, dealId) => {
+      e.dataTransfer.setData("dealId", dealId);
+    };
+
+    const handleDrop = (e, newStage) => {
+      const dealId = e.dataTransfer.getData("dealId");
+      const updatedDeals = deals.map(d => d.id === dealId ? { ...d, stage: newStage } : d);
+      setDeals(updatedDeals);
+    };
+
+    const handleAddDeal = (e) => {
+      e.preventDefault();
+      setDeals([...deals, { ...formData, id: generateId(), value: Number(formData.value), probability: 20 }]);
+      setIsModalOpen(false);
+      setFormData({ title: '', contactId: '', stage: 'Qualification', value: '' });
+    };
+
+    const getContactName = (id) => {
+      const contact = contacts.find(c => c.id === id);
+      return contact ? contact.name : 'Unknown';
+    };
+
+    return (
+            <div className="p-6 h-full flex flex-col fade-in">
+              <div className="flex justify-between items-center mb-6">
+                <h2 className={`text-2xl font-bold ${isDarkMode ? 'text-white' : 'text-slate-800'}`}>Pipeline</h2>
+                <button
+                        onClick={() => setIsModalOpen(true)}
+                        className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg flex items-center space-x-2 shadow-sm"
+                >
+                  <i className="ph ph-plus text-lg"></i>
+                  <span>New Deal</span>
+                </button>
+              </div>
+
+              <div className="flex-1 overflow-x-auto pb-2">
+                <div className="flex space-x-4 h-full min-w-[1000px]">
+                  {stages.map(stage => {
+                    const stageDeals = deals.filter(d => d.stage === stage);
+                    const stageTotal = stageDeals.reduce((sum, d) => sum + d.value, 0);
+
+                    return (
+                            <div
+                                    key={stage}
+                                    onDragOver={(e) => e.preventDefault()}
+                                    onDrop={(e) => handleDrop(e, stage)}
+                                    className={`flex-1 rounded-xl flex flex-col max-w-sm h-full border transition-colors ${isDarkMode ? 'bg-slate-800 border-slate-700' : 'bg-slate-100 border-slate-200'}`}
+                            >
+                              <div className={`p-4 flex justify-between items-center border-b ${isDarkMode ? 'border-slate-700' : 'border-slate-200/60'}`}>
+                                <h3 className={`font-semibold ${isDarkMode ? 'text-slate-200' : 'text-slate-700'}`}>{stage}</h3>
+                                <span className={`px-2 py-0.5 rounded text-xs font-medium shadow-sm ${isDarkMode ? 'bg-slate-700 text-slate-300' : 'bg-white text-slate-500'}`}>{formatCurrency(stageTotal)}</span>
+                              </div>
+                              <div className="p-3 space-y-3 overflow-y-auto flex-1">
+                                {stageDeals.map(deal => (
+                                        <div
+                                                key={deal.id}
+                                                draggable
+                                                onDragStart={(e) => handleDragStart(e, deal.id)}
+                                                className={`p-4 rounded-lg shadow-sm border cursor-grab active:cursor-grabbing hover:shadow-md transition-shadow ${isDarkMode ? 'bg-slate-700 border-slate-600' : 'bg-white border-slate-200'}`}
+                                        >
+                                          <div className="flex justify-between items-start mb-2">
+                                            <span className="text-xs font-semibold text-blue-600 bg-blue-50 dark:bg-blue-900/30 dark:text-blue-400 px-2 py-0.5 rounded">{deal.probability}%</span>
+                                            <button className={`hover:text-red-400 ${isDarkMode ? 'text-slate-500' : 'text-slate-400'}`}><i className="ph ph-dots-three"></i></button>
+                                          </div>
+                                          <h4 className={`font-medium mb-1 ${isDarkMode ? 'text-white' : 'text-slate-800'}`}>{deal.title}</h4>
+                                          <p className={`text-xs mb-3 flex items-center ${isDarkMode ? 'text-slate-400' : 'text-slate-500'}`}>
+                                            <i className="ph ph-user mr-1"></i> {getContactName(deal.contactId)}
+                                          </p>
+                                          <div className={`flex justify-between items-center pt-2 border-t ${isDarkMode ? 'border-slate-600' : 'border-slate-50'}`}>
+                                            <span className={`text-sm font-medium ${isDarkMode ? 'text-slate-200' : 'text-slate-700'}`}>{formatCurrency(deal.value)}</span>
+                                            <div className="w-6 h-6 rounded-full bg-slate-200 text-slate-600 flex items-center justify-center text-xs">
+                                              JD
+                                            </div>
+                                          </div>
+                                        </div>
+                                ))}
+                                {stageDeals.length === 0 && (
+                                        <div className={`border-2 border-dashed rounded-lg h-24 flex items-center justify-center text-sm ${isDarkMode ? 'border-slate-700 text-slate-500' : 'border-slate-300 text-slate-400'}`}>
+                                          Drop items here
+                                        </div>
+                                )}
+                              </div>
+                            </div>
+                    );
+                  })}
+                </div>
+              </div>
+
+              {isModalOpen && (
+                      <Modal title="Create New Deal" onClose={() => setIsModalOpen(false)} isDarkMode={isDarkMode}>
+                        <form onSubmit={handleAddDeal} className="space-y-4">
+                          <div>
+                            <label className={`block text-sm font-medium mb-1 ${isDarkMode ? 'text-slate-300' : 'text-slate-700'}`}>Deal Title</label>
+                            <input required type="text" className={`w-full px-3 py-2 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition-colors ${isDarkMode ? 'bg-slate-700 border-slate-600 text-white' : 'bg-white border-slate-300'}`}
+                                   value={formData.title} onChange={e => setFormData({...formData, title: e.target.value})} />
+                          </div>
+                          <div>
+                            <label className={`block text-sm font-medium mb-1 ${isDarkMode ? 'text-slate-300' : 'text-slate-700'}`}>Associated Contact</label>
+                            <select required className={`w-full px-3 py-2 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition-colors ${isDarkMode ? 'bg-slate-700 border-slate-600 text-white' : 'bg-white border-slate-300'}`}
+                                    value={formData.contactId} onChange={e => setFormData({...formData, contactId: e.target.value})}>
+                              <option value="">Select a contact...</option>
+                              {contacts.map(c => (
+                                      <option key={c.id} value={c.id}>{c.name} ({c.company})</option>
+                              ))}
+                            </select>
+                          </div>
+                          <div className="grid grid-cols-2 gap-4">
+                            <div>
+                              <label className={`block text-sm font-medium mb-1 ${isDarkMode ? 'text-slate-300' : 'text-slate-700'}`}>Value ($)</label>
+                              <input required type="number" className={`w-full px-3 py-2 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition-colors ${isDarkMode ? 'bg-slate-700 border-slate-600 text-white' : 'bg-white border-slate-300'}`}
+                                     value={formData.value} onChange={e => setFormData({...formData, value: e.target.value})} />
+                            </div>
+                            <div>
+                              <label className={`block text-sm font-medium mb-1 ${isDarkMode ? 'text-slate-300' : 'text-slate-700'}`}>Stage</label>
+                              <select className={`w-full px-3 py-2 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition-colors ${isDarkMode ? 'bg-slate-700 border-slate-600 text-white' : 'bg-white border-slate-300'}`}
+                                      value={formData.stage} onChange={e => setFormData({...formData, stage: e.target.value})}>
+                                {stages.map(s => <option key={s} value={s}>{s}</option>)}
+                              </select>
+                            </div>
+                          </div>
+                          <div className="pt-4 flex justify-end space-x-3">
+                            <button type="button" onClick={() => setIsModalOpen(false)} className={`px-4 py-2 rounded-lg ${isDarkMode ? 'border-slate-600 text-slate-300 hover:bg-slate-700' : 'border-slate-300 text-slate-700 hover:bg-slate-50'}`}>Cancel</button>
+                            <button type="submit" className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700">Create Deal</button>
+                          </div>
+                        </form>
+                      </Modal>
+              )}
+            </div>
+    );
+  };
+
+  const Settings = ({ isDarkMode, toggleDarkMode }) => (
+          <div className="p-6 max-w-2xl mx-auto fade-in">
+            <h2 className={`text-2xl font-bold mb-6 ${isDarkMode ? 'text-white' : 'text-slate-800'}`}>Settings</h2>
+
+            <div className={`rounded-xl shadow-sm border overflow-hidden transition-colors ${isDarkMode ? 'bg-slate-800 border-slate-700' : 'bg-white border-slate-200'}`}>
+              <div className={`p-4 border-b ${isDarkMode ? 'bg-slate-900/50 border-slate-700' : 'bg-slate-50 border-slate-100'}`}>
+                <h3 className={`font-semibold ${isDarkMode ? 'text-white' : 'text-slate-700'}`}>General Preferences</h3>
+              </div>
+              <div className="p-6 space-y-6">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <p className={`font-medium ${isDarkMode ? 'text-white' : 'text-slate-800'}`}>Dark Mode</p>
+                    <p className={`text-sm ${isDarkMode ? 'text-slate-400' : 'text-slate-500'}`}>Switch between light and dark themes</p>
+                  </div>
+                  <button
+                          onClick={toggleDarkMode}
+                          className={`w-12 h-6 rounded-full relative transition-colors duration-200 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 ${isDarkMode ? 'bg-blue-600' : 'bg-slate-200'}`}
+                  >
+                    <div className={`w-4 h-4 bg-white rounded-full absolute top-1 transition-all duration-200 shadow-sm ${isDarkMode ? 'right-1' : 'left-1'}`}></div>
+                  </button>
+                </div>
+                <hr className={`border-${isDarkMode ? 'slate-700' : 'slate-100'}`} />
+                <div className="flex items-center justify-between opacity-50 cursor-not-allowed">
+                  <div>
+                    <p className={`font-medium ${isDarkMode ? 'text-white' : 'text-slate-800'}`}>Email Notifications</p>
+                    <p className={`text-sm ${isDarkMode ? 'text-slate-400' : 'text-slate-500'}`}>Receive emails for new deal updates</p>
+                  </div>
+                  <button className={`w-12 h-6 rounded-full relative transition-colors duration-200 ${isDarkMode ? 'bg-blue-600' : 'bg-blue-600'}`}>
+                    <div className="w-4 h-4 bg-white rounded-full absolute top-1 right-1 shadow-sm"></div>
+                  </button>
+                </div>
+                <hr className={`border-${isDarkMode ? 'slate-700' : 'slate-100'}`} />
+                <div>
+                  <p className={`font-medium mb-2 ${isDarkMode ? 'text-white' : 'text-slate-800'}`}>Currency Format</p>
+                  <select className={`w-full px-3 py-2 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition-colors ${isDarkMode ? 'bg-slate-700 border-slate-600 text-white' : 'bg-white border-slate-300'}`}>
+                    <option>USD ($)</option>
+                    <option>EUR (€)</option>
+                    <option>GBP (£)</option>
+                  </select>
+                </div>
+              </div>
+              <div className={`p-4 text-right ${isDarkMode ? 'bg-slate-900/50' : 'bg-slate-50'}`}>
+                <button className="px-4 py-2 bg-blue-600 text-white rounded-lg text-sm font-medium hover:bg-blue-700 transition-colors">Save Changes</button>
+              </div>
+            </div>
+
+            <div className={`mt-6 rounded-xl p-4 flex items-start space-x-3 transition-colors ${isDarkMode ? 'bg-red-900/20 border border-red-900/50' : 'bg-red-50'}`}>
+              <i className="ph ph-warning-circle text-red-500 text-xl mt-0.5"></i>
+              <div>
+                <h4 className={`font-medium ${isDarkMode ? 'text-red-400' : 'text-red-800'}`}>Danger Zone</h4>
+                <p className={`text-sm mt-1 mb-3 ${isDarkMode ? 'text-red-400/80' : 'text-red-600'}`}>Once you delete your account, there is no going back. Please be certain.</p>
+                <button className={`text-sm border px-3 py-1.5 rounded-md transition-colors ${isDarkMode ? 'border-red-800 text-red-400 hover:bg-red-900/30' : 'border-red-200 bg-white text-red-600 hover:bg-red-100'}`}>Delete Account</button>
+              </div>
+            </div>
+          </div>
+  );
+
+  const Modal = ({ title, children, onClose, isDarkMode }) => {
+    useEffect(() => {
+      const handleEsc = (e) => { if (e.key === 'Escape') onClose(); };
+      window.addEventListener('keydown', handleEsc);
+      return () => window.removeEventListener('keydown', handleEsc);
+    }, [onClose]);
+
+    return (
+            <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+              <div className="absolute inset-0 bg-slate-900/50 backdrop-blur-sm" onClick={onClose}></div>
+              <div className={`w-full max-w-md z-10 overflow-hidden fade-in rounded-xl shadow-2xl transition-colors ${isDarkMode ? 'bg-slate-800' : 'bg-white'}`}>
+                <div className={`flex justify-between items-center p-4 border-b ${isDarkMode ? 'border-slate-700' : 'border-slate-100'}`}>
+                  <h3 className={`font-bold text-lg ${isDarkMode ? 'text-white' : 'text-slate-800'}`}>{title}</h3>
+                  <button onClick={onClose} className={`hover:text-red-400 transition-colors ${isDarkMode ? 'text-slate-400' : 'text-slate-400'}`}><i className="ph ph-x text-xl"></i></button>
+                </div>
+                <div className="p-6">
+                  {children}
+                </div>
+              </div>
+            </div>
+    );
+  };
+
+  const App = () => {
+    const [activeView, setActiveView] = useState('dashboard');
+    const [viewTitle, setViewTitle] = useState('Dashboard');
+    const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+    const [isDarkMode, setIsDarkMode] = useState(false);
+
+    // Toggle dark mode class on HTML element
+    useEffect(() => {
+      if (isDarkMode) {
+        document.documentElement.classList.add('dark');
+      } else {
+        document.documentElement.classList.remove('dark');
+      }
+    }, [isDarkMode]);
+
+    const toggleDarkMode = () => setIsDarkMode(!isDarkMode);
+
+    const [contacts, setContacts] = useState(initialContacts);
+    const [deals, setDeals] = useState(initialDeals);
+
+    const renderView = () => {
+      switch (activeView) {
+        case 'dashboard': return <Dashboard contacts={contacts} deals={deals} isDarkMode={isDarkMode} />;
+        case 'contacts': return <Contacts contacts={contacts} setContacts={setContacts} isDarkMode={isDarkMode} />;
+        case 'deals': return <Deals contacts={contacts} deals={deals} setDeals={setDeals} isDarkMode={isDarkMode} />;
+        case 'settings': return <Settings isDarkMode={isDarkMode} toggleDarkMode={toggleDarkMode} />;
+        default: return <Dashboard contacts={contacts} deals={deals} isDarkMode={isDarkMode} />;
+      }
+    };
+
+    return (
+            <div className="flex w-full h-full">
+              <Sidebar activeView={activeView} setActiveView={setActiveView} isDarkMode={isDarkMode} />
+
+              {mobileMenuOpen && (
+                      <div className="fixed inset-0 bg-black/50 z-30 md:hidden" onClick={() => setMobileMenuOpen(false)}></div>
+              )}
+
+              {/* Mobile Sidebar */}
+              <div className={`fixed inset-y-0 left-0 w-64 text-white transform transition-transform duration-300 z-40 md:hidden flex flex-col ${isDarkMode ? 'bg-slate-950' : 'bg-slate-900'} ${mobileMenuOpen ? 'translate-x-0' : '-translate-x-full'}`}>
+                <div className="p-6 flex items-center justify-between">
+                  <span className="text-xl font-bold">NexusCRM</span>
+                  <button onClick={() => setMobileMenuOpen(false)}><i className="ph ph-x text-xl"></i></button>
+                </div>
+                <nav className="flex-1 px-4 space-y-2 mt-4">
+                  {['dashboard', 'contacts', 'deals', 'settings'].map(item => (
+                          <button
+                                  key={item}
+                                  onClick={() => { setActiveView(item); setMobileMenuOpen(false); }}
+                                  className={`w-full text-left px-4 py-3 rounded-lg capitalize ${activeView === item ? 'bg-blue-600' : 'text-slate-400 hover:bg-slate-800'}`}
+                          >
+                            {item}
+                          </button>
+                  ))}
+                </nav>
+              </div>
+
+              <main className={`flex-1 flex flex-col h-full overflow-hidden relative transition-colors duration-300 ${isDarkMode ? 'bg-slate-900' : 'bg-slate-50'}`}>
+                <Topbar
+                        toggleSidebar={() => setMobileMenuOpen(!mobileMenuOpen)}
+                        activeView={activeView}
+                        setViewTitle={setViewTitle}
+                        isDarkMode={isDarkMode}
+                />
+                <div className="flex-1 overflow-hidden relative">
+                  <header className="px-6 py-4">
+                    <h1 className={`text-2xl font-bold transition-colors ${isDarkMode ? 'text-white' : 'text-slate-800'}`}>{viewTitle}</h1>
+                  </header>
+                  <div className="h-[calc(100%-4rem)] overflow-y-auto">
+                    {renderView()}
+                  </div>
+                </div>
+              </main>
+            </div>
+    );
+  };
+
+  const root = ReactDOM.createRoot(document.getElementById('root'));
+  root.render(<App />);
+</script>
+</body>
+</html>

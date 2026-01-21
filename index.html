@@ -1,0 +1,123 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>CRM SPA Model Comparison</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
+    body { font-family: 'Inter', sans-serif; }
+  </style>
+</head>
+<body class="bg-zinc-950 text-zinc-100 min-h-screen">
+  <div class="max-w-4xl mx-auto px-6 py-16">
+
+    <header class="mb-16">
+      <h1 class="text-4xl font-bold mb-4 bg-gradient-to-r from-violet-400 to-cyan-400 bg-clip-text text-transparent">
+        CRM SPA Model Comparison
+      </h1>
+      <p class="text-zinc-400 text-lg leading-relaxed max-w-2xl">
+        A benchmark comparing how different AI models respond to the same prompt.
+      </p>
+    </header>
+
+    <section class="mb-16 p-6 rounded-2xl bg-zinc-900/50 border border-zinc-800">
+      <h2 class="text-sm font-semibold text-zinc-500 uppercase tracking-wider mb-3">Prompt</h2>
+      <p class="text-zinc-300 font-mono text-sm leading-relaxed">
+        "Write a single SPA with React, React-DOM and TailwindCSS of a SaaS app for a basic general CRM in a single HTML file"
+      </p>
+    </section>
+
+    <section>
+      <h2 class="text-sm font-semibold text-zinc-500 uppercase tracking-wider mb-6">Results by Model</h2>
+      <div class="grid gap-4">
+
+        <a href="./opus-45/" class="group flex items-center justify-between p-5 rounded-xl bg-zinc-900 border border-zinc-800 hover:border-violet-500/50 hover:bg-zinc-900/80 transition-all">
+          <div class="flex items-center gap-4">
+            <div class="w-10 h-10 rounded-lg bg-violet-500/20 flex items-center justify-center text-violet-400">
+              <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9.75 17L9 20l-1 1h8l-1-1-.75-3M3 13h18M5 17h14a2 2 0 002-2V5a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"/></svg>
+            </div>
+            <div>
+              <span class="font-semibold text-zinc-100 group-hover:text-violet-400 transition-colors">Claude Opus 4.5</span>
+              <p class="text-sm text-zinc-500">Anthropic</p>
+            </div>
+          </div>
+          <svg class="w-5 h-5 text-zinc-600 group-hover:text-violet-400 group-hover:translate-x-1 transition-all" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"/></svg>
+        </a>
+
+        <a href="./kimi-k2/" class="group flex items-center justify-between p-5 rounded-xl bg-zinc-900 border border-zinc-800 hover:border-cyan-500/50 hover:bg-zinc-900/80 transition-all">
+          <div class="flex items-center gap-4">
+            <div class="w-10 h-10 rounded-lg bg-cyan-500/20 flex items-center justify-center text-cyan-400">
+              <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9.75 17L9 20l-1 1h8l-1-1-.75-3M3 13h18M5 17h14a2 2 0 002-2V5a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"/></svg>
+            </div>
+            <div>
+              <span class="font-semibold text-zinc-100 group-hover:text-cyan-400 transition-colors">Kimi K2</span>
+              <p class="text-sm text-zinc-500">Moonshot AI</p>
+            </div>
+          </div>
+          <svg class="w-5 h-5 text-zinc-600 group-hover:text-cyan-400 group-hover:translate-x-1 transition-all" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"/></svg>
+        </a>
+
+        <a href="./deepseek-r3/" class="group flex items-center justify-between p-5 rounded-xl bg-zinc-900 border border-zinc-800 hover:border-emerald-500/50 hover:bg-zinc-900/80 transition-all">
+          <div class="flex items-center gap-4">
+            <div class="w-10 h-10 rounded-lg bg-emerald-500/20 flex items-center justify-center text-emerald-400">
+              <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9.75 17L9 20l-1 1h8l-1-1-.75-3M3 13h18M5 17h14a2 2 0 002-2V5a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"/></svg>
+            </div>
+            <div>
+              <span class="font-semibold text-zinc-100 group-hover:text-emerald-400 transition-colors">DeepSeek R3</span>
+              <p class="text-sm text-zinc-500">DeepSeek</p>
+            </div>
+          </div>
+          <svg class="w-5 h-5 text-zinc-600 group-hover:text-emerald-400 group-hover:translate-x-1 transition-all" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"/></svg>
+        </a>
+
+        <a href="./mistral-coder/" class="group flex items-center justify-between p-5 rounded-xl bg-zinc-900 border border-zinc-800 hover:border-orange-500/50 hover:bg-zinc-900/80 transition-all">
+          <div class="flex items-center gap-4">
+            <div class="w-10 h-10 rounded-lg bg-orange-500/20 flex items-center justify-center text-orange-400">
+              <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9.75 17L9 20l-1 1h8l-1-1-.75-3M3 13h18M5 17h14a2 2 0 002-2V5a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"/></svg>
+            </div>
+            <div>
+              <span class="font-semibold text-zinc-100 group-hover:text-orange-400 transition-colors">Mistral Coder</span>
+              <p class="text-sm text-zinc-500">Mistral AI</p>
+            </div>
+          </div>
+          <svg class="w-5 h-5 text-zinc-600 group-hover:text-orange-400 group-hover:translate-x-1 transition-all" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"/></svg>
+        </a>
+
+        <a href="./gpt-oss-120b/" class="group flex items-center justify-between p-5 rounded-xl bg-zinc-900 border border-zinc-800 hover:border-pink-500/50 hover:bg-zinc-900/80 transition-all">
+          <div class="flex items-center gap-4">
+            <div class="w-10 h-10 rounded-lg bg-pink-500/20 flex items-center justify-center text-pink-400">
+              <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9.75 17L9 20l-1 1h8l-1-1-.75-3M3 13h18M5 17h14a2 2 0 002-2V5a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"/></svg>
+            </div>
+            <div>
+              <span class="font-semibold text-zinc-100 group-hover:text-pink-400 transition-colors">GPT OSS 120B</span>
+              <p class="text-sm text-zinc-500">OpenAI</p>
+            </div>
+          </div>
+          <svg class="w-5 h-5 text-zinc-600 group-hover:text-pink-400 group-hover:translate-x-1 transition-all" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"/></svg>
+        </a>
+
+        <a href="./glm-47/" class="group flex items-center justify-between p-5 rounded-xl bg-zinc-900 border border-zinc-800 hover:border-amber-500/50 hover:bg-zinc-900/80 transition-all">
+          <div class="flex items-center gap-4">
+            <div class="w-10 h-10 rounded-lg bg-amber-500/20 flex items-center justify-center text-amber-400">
+              <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9.75 17L9 20l-1 1h8l-1-1-.75-3M3 13h18M5 17h14a2 2 0 002-2V5a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"/></svg>
+            </div>
+            <div>
+              <span class="font-semibold text-zinc-100 group-hover:text-amber-400 transition-colors">GLM-4.7</span>
+              <p class="text-sm text-zinc-500">Zhipu AI</p>
+            </div>
+          </div>
+          <svg class="w-5 h-5 text-zinc-600 group-hover:text-amber-400 group-hover:translate-x-1 transition-all" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"/></svg>
+        </a>
+
+      </div>
+    </section>
+
+    <footer class="mt-16 pt-8 border-t border-zinc-800 text-center text-zinc-600 text-sm">
+      Click any model to view its CRM implementation
+    </footer>
+
+  </div>
+</body>
+</html>
