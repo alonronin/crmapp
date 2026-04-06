@@ -1,0 +1,9 @@
+{
+  "name": "crmapp",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "generate": "bun scripts/generate.js",
+    "add": "bun scripts/add-model.js"
+  }
+}
