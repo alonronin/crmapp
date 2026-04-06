@@ -1,0 +1,847 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Nexus CRM - Modern Customer Relationship Management</title>
+
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+
+    <!-- React & ReactDOM -->
+    <script crossorigin src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
+    <script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
+
+    <!-- Babel for JSX -->
+    <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+
+    <!-- Lucide Icons -->
+    <script src="https://unpkg.com/lucide@latest"></script>
+
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        primary: {
+                            50: '#eff6ff',
+                            100: '#dbeafe',
+                            500: '#3b82f6',
+                            600: '#2563eb',
+                            700: '#1d4ed8',
+                        }
+                    }
+                }
+            }
+        }
+    </script>
+
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap');
+
+        body {
+            font-family: 'Inter', sans-serif;
+        }
+
+        .scrollbar-hide::-webkit-scrollbar {
+            display: none;
+        }
+
+        .custom-scrollbar::-webkit-scrollbar {
+            width: 6px;
+            height: 6px;
+        }
+
+        .custom-scrollbar::-webkit-scrollbar-track {
+            background: #f1f5f9;
+        }
+
+        .custom-scrollbar::-webkit-scrollbar-thumb {
+            background: #cbd5e1;
+            border-radius: 3px;
+        }
+
+        .fade-in {
+            animation: fadeIn 0.3s ease-in-out;
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        .slide-in {
+            animation: slideIn 0.3s ease-out;
+        }
+
+        @keyframes slideIn {
+            from { transform: translateX(-20px); opacity: 0; }
+            to { transform: translateX(0); opacity: 1; }
+        }
+    </style>
+</head>
+<body class="bg-gray-50 text-gray-900">
+<div id="root"></div>
+
+<script type="text/babel">
+    const { useState, useEffect, useMemo } = React;
+
+    // Icon Components
+    const Icons = {
+        LayoutDashboard: () => <i data-lucide="layout-dashboard" className="w-5 h-5"></i>,
+        Users: () => <i data-lucide="users" className="w-5 h-5"></i>,
+        Building2: () => <i data-lucide="building-2" className="w-5 h-5"></i>,
+        Pipeline: () => <i data-lucide="bar-chart-3" className="w-5 h-5"></i>,
+        Settings: () => <i data-lucide="settings" className="w-5 h-5"></i>,
+        Search: () => <i data-lucide="search" className="w-4 h-4"></i>,
+        Plus: () => <i data-lucide="plus" className="w-4 h-4"></i>,
+        MoreVertical: () => <i data-lucide="more-vertical" className="w-4 h-4"></i>,
+        Mail: () => <i data-lucide="mail" className="w-4 h-4"></i>,
+        Phone: () => <i data-lucide="phone" className="w-4 h-4"></i>,
+        Calendar: () => <i data-lucide="calendar" className="w-4 h-4"></i>,
+        DollarSign: () => <i data-lucide="dollar-sign" className="w-4 h-4"></i>,
+        TrendingUp: () => <i data-lucide="trending-up" className="w-5 h-5"></i>,
+        TrendingDown: () => <i data-lucide="trending-down" className="w-5 h-5"></i>,
+        X: () => <i data-lucide="x" className="w-5 h-5"></i>,
+        ChevronDown: () => <i data-lucide="chevron-down" className="w-4 h-4"></i>,
+        Filter: () => <i data-lucide="filter" className="w-4 h-4"></i>,
+        Edit: () => <i data-lucide="edit" className="w-4 h-4"></i>,
+        Trash2: () => <i data-lucide="trash-2" className="w-4 h-4"></i>,
+        Bell: () => <i data-lucide="bell" className="w-5 h-5"></i>,
+        Menu: () => <i data-lucide="menu" className="w-6 h-6"></i>
+    };
+
+    // Mock Data
+    const generateMockData = () => ({
+        contacts: [
+            { id: 1, name: "Sarah Johnson", email: "sarah.j@acme.com", phone: "+1 (555) 123-4567", company: "Acme Corp", status: "active", lastContact: "2026-04-05" },
+            { id: 2, name: "Michael Chen", email: "mchen@techstart.io", phone: "+1 (555) 987-6543", company: "TechStart Inc", status: "active", lastContact: "2026-04-04" },
+            { id: 3, name: "Emily Davis", email: "emily.d@global.com", phone: "+1 (555) 456-7890", company: "Global Solutions", status: "inactive", lastContact: "2026-03-28" },
+            { id: 4, name: "James Wilson", email: "j.wilson@innovate.co", phone: "+1 (555) 234-5678", company: "Innovate Co", status: "active", lastContact: "2026-04-06" },
+            { id: 5, name: "Lisa Anderson", email: "lisa.a@future.net", phone: "+1 (555) 876-5432", company: "Future Systems", status: "lead", lastContact: "2026-04-01" }
+        ],
+        companies: [
+            { id: 1, name: "Acme Corp", industry: "Technology", employees: 250, revenue: "$5M", location: "San Francisco, CA", status: "customer" },
+            { id: 2, name: "TechStart Inc", industry: "Software", employees: 45, revenue: "$2M", location: "Austin, TX", status: "customer" },
+            { id: 3, name: "Global Solutions", industry: "Consulting", employees: 120, revenue: "$8M", location: "New York, NY", status: "prospect" },
+            { id: 4, name: "Innovate Co", industry: "Healthcare", employees: 80, revenue: "$4M", location: "Boston, MA", status: "customer" }
+        ],
+        deals: [
+            { id: 1, title: "Enterprise License Deal", company: "Acme Corp", value: 50000, stage: "negotiation", probability: 75, closeDate: "2026-04-15" },
+            { id: 2, title: "Software Integration", company: "TechStart Inc", value: 25000, stage: "proposal", probability: 60, closeDate: "2026-04-20" },
+            { id: 3, title: "Consulting Agreement", company: "Global Solutions", value: 75000, stage: "qualified", probability: 40, closeDate: "2026-05-01" },
+            { id: 4, title: "Healthcare Platform", company: "Innovate Co", value: 120000, stage: "closed-won", probability: 100, closeDate: "2026-03-30" },
+            { id: 5, title: "Analytics Dashboard", company: "Future Systems", value: 35000, stage: "new", probability: 20, closeDate: "2026-05-15" }
+        ]
+    });
+
+    // Utility Components
+    const Button = ({ children, variant = "primary", className = "", onClick, icon: Icon }) => {
+        const variants = {
+            primary: "bg-primary-600 hover:bg-primary-700 text-white",
+            secondary: "bg-white border border-gray-300 text-gray-700 hover:bg-gray-50",
+            danger: "bg-red-600 hover:bg-red-700 text-white",
+            ghost: "text-gray-600 hover:bg-gray-100"
+        };
+
+        return (
+            <button
+                onClick={onClick}
+                className={`inline-flex items-center gap-2 px-4 py-2 rounded-lg font-medium transition-colors duration-200 ${variants[variant]} ${className}`}
+            >
+                {Icon && <Icon />}
+                {children}
+            </button>
+        );
+    };
+
+    const Card = ({ children, className = "" }) => (
+        <div className={`bg-white rounded-xl shadow-sm border border-gray-200 ${className}`}>
+            {children}
+        </div>
+    );
+
+    const Badge = ({ children, variant = "default" }) => {
+        const variants = {
+            default: "bg-gray-100 text-gray-800",
+            success: "bg-green-100 text-green-800",
+            warning: "bg-yellow-100 text-yellow-800",
+            danger: "bg-red-100 text-red-800",
+            primary: "bg-primary-100 text-primary-800"
+        };
+
+        return (
+            <span className={`inline-flex px-2.5 py-0.5 rounded-full text-xs font-medium ${variants[variant]}`}>
+                    {children}
+                </span>
+        );
+    };
+
+    const Modal = ({ isOpen, onClose, title, children }) => {
+        if (!isOpen) return null;
+
+        return (
+            <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-50 backdrop-blur-sm p-4">
+                <div className="bg-white rounded-xl shadow-xl w-full max-w-lg max-h-[90vh] overflow-y-auto fade-in">
+                    <div className="flex items-center justify-between p-6 border-b border-gray-200">
+                        <h3 className="text-lg font-semibold text-gray-900">{title}</h3>
+                        <button onClick={onClose} className="text-gray-400 hover:text-gray-600">
+                            <Icons.X />
+                        </button>
+                    </div>
+                    <div className="p-6">
+                        {children}
+                    </div>
+                </div>
+            </div>
+        );
+    };
+
+    // Dashboard View
+    const Dashboard = ({ data }) => {
+        const stats = useMemo(() => {
+            const totalRevenue = data.deals
+                .filter(d => d.stage === 'closed-won')
+                .reduce((sum, d) => sum + d.value, 0);
+            const activeDeals = data.deals.filter(d => d.stage !== 'closed-won' && d.stage !== 'closed-lost').length;
+            const totalContacts = data.contacts.length;
+            const winRate = Math.round((data.deals.filter(d => d.stage === 'closed-won').length / data.deals.length) * 100);
+
+            return { totalRevenue, activeDeals, totalContacts, winRate };
+        }, [data]);
+
+        const recentActivity = [
+            { type: 'deal', message: 'Enterprise License Deal moved to Negotiation', time: '2 hours ago', user: 'John Doe' },
+            { type: 'contact', message: 'New contact added: Sarah Johnson', time: '4 hours ago', user: 'Jane Smith' },
+            { type: 'deal', message: 'Healthcare Platform marked as Closed Won', time: '1 day ago', user: 'John Doe' },
+            { type: 'company', message: 'Acme Corp details updated', time: '1 day ago', user: 'Jane Smith' }
+        ];
+
+        return (
+            <div className="space-y-6 fade-in">
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+                    <Card className="p-6">
+                        <div className="flex items-center justify-between">
+                            <div>
+                                <p className="text-sm font-medium text-gray-600">Total Revenue</p>
+                                <p className="text-2xl font-bold text-gray-900 mt-1">
+                                    ${stats.totalRevenue.toLocaleString()}
+                                </p>
+                                <p className="text-sm text-green-600 mt-1 flex items-center gap-1">
+                                    <Icons.TrendingUp /> +12% from last month
+                                </p>
+                            </div>
+                            <div className="p-3 bg-primary-100 rounded-lg">
+                                <Icons.DollarSign />
+                            </div>
+                        </div>
+                    </Card>
+
+                    <Card className="p-6">
+                        <div className="flex items-center justify-between">
+                            <div>
+                                <p className="text-sm font-medium text-gray-600">Active Deals</p>
+                                <p className="text-2xl font-bold text-gray-900 mt-1">{stats.activeDeals}</p>
+                                <p className="text-sm text-green-600 mt-1 flex items-center gap-1">
+                                    <Icons.TrendingUp /> +3 new this week
+                                </p>
+                            </div>
+                            <div className="p-3 bg-blue-100 rounded-lg text-blue-600">
+                                <Icons.Pipeline />
+                            </div>
+                        </div>
+                    </Card>
+
+                    <Card className="p-6">
+                        <div className="flex items-center justify-between">
+                            <div>
+                                <p className="text-sm font-medium text-gray-600">Total Contacts</p>
+                                <p className="text-2xl font-bold text-gray-900 mt-1">{stats.totalContacts}</p>
+                                <p className="text-sm text-gray-500 mt-1 flex items-center gap-1">
+                                    Across {data.companies.length} companies
+                                </p>
+                            </div>
+                            <div className="p-3 bg-purple-100 rounded-lg text-purple-600">
+                                <Icons.Users />
+                            </div>
+                        </div>
+                    </Card>
+
+                    <Card className="p-6">
+                        <div className="flex items-center justify-between">
+                            <div>
+                                <p className="text-sm font-medium text-gray-600">Win Rate</p>
+                                <p className="text-2xl font-bold text-gray-900 mt-1">{stats.winRate}%</p>
+                                <p className="text-sm text-red-600 mt-1 flex items-center gap-1">
+                                    <Icons.TrendingDown /> -2% from last month
+                                </p>
+                            </div>
+                            <div className="p-3 bg-green-100 rounded-lg text-green-600">
+                                <Icons.TrendingUp />
+                            </div>
+                        </div>
+                    </Card>
+                </div>
+
+                <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+                    <Card className="lg:col-span-2 p-6">
+                        <h3 className="text-lg font-semibold text-gray-900 mb-4">Pipeline Overview</h3>
+                        <div className="space-y-4">
+                            {['new', 'qualified', 'proposal', 'negotiation', 'closed-won'].map((stage, index) => {
+                                const stageDeals = data.deals.filter(d => d.stage === stage);
+                                const stageValue = stageDeals.reduce((sum, d) => sum + d.value, 0);
+                                const colors = ['bg-gray-500', 'bg-blue-500', 'bg-yellow-500', 'bg-purple-500', 'bg-green-500'];
+
+                                return (
+                                    <div key={stage} className="flex items-center gap-4">
+                                        <div className="w-24 text-sm font-medium text-gray-600 capitalize">{stage.replace('-', ' ')}</div>
+                                        <div className="flex-1 h-8 bg-gray-100 rounded-full overflow-hidden">
+                                            <div
+                                                className={`h-full ${colors[index]} transition-all duration-500 flex items-center justify-end pr-3`}
+                                                style={{ width: `${Math.max((stageDeals.length / data.deals.length) * 100, 5)}%` }}
+                                            >
+                                                    <span className="text-white text-xs font-medium">
+                                                        {stageDeals.length}
+                                                    </span>
+                                            </div>
+                                        </div>
+                                        <div className="w-24 text-right text-sm font-medium text-gray-900">
+                                            ${(stageValue / 1000).toFixed(0)}k
+                                        </div>
+                                    </div>
+                                );
+                            })}
+                        </div>
+                    </Card>
+
+                    <Card className="p-6">
+                        <h3 className="text-lg font-semibold text-gray-900 mb-4">Recent Activity</h3>
+                        <div className="space-y-4">
+                            {recentActivity.map((activity, idx) => (
+                                <div key={idx} className="flex gap-3 pb-3 border-b border-gray-100 last:border-0">
+                                    <div className={`w-2 h-2 rounded-full mt-2 flex-shrink-0 ${
+                                        activity.type === 'deal' ? 'bg-primary-500' :
+                                            activity.type === 'contact' ? 'bg-green-500' : 'bg-purple-500'
+                                    }`} />
+                                    <div>
+                                        <p className="text-sm text-gray-900">{activity.message}</p>
+                                        <p className="text-xs text-gray-500 mt-1">
+                                            {activity.user} • {activity.time}
+                                        </p>
+                                    </div>
+                                </div>
+                            ))}
+                        </div>
+                    </Card>
+                </div>
+            </div>
+        );
+    };
+
+    // Contacts View
+    const Contacts = ({ data, setData }) => {
+        const [searchTerm, setSearchTerm] = useState('');
+        const [isModalOpen, setIsModalOpen] = useState(false);
+        const [editingContact, setEditingContact] = useState(null);
+        const [formData, setFormData] = useState({
+            name: '', email: '', phone: '', company: '', status: 'lead'
+        });
+
+        const filteredContacts = data.contacts.filter(contact =>
+            contact.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+            contact.email.toLowerCase().includes(searchTerm.toLowerCase()) ||
+            contact.company.toLowerCase().includes(searchTerm.toLowerCase())
+        );
+
+        const handleSubmit = (e) => {
+            e.preventDefault();
+            if (editingContact) {
+                setData(prev => ({
+                    ...prev,
+                    contacts: prev.contacts.map(c =>
+                        c.id === editingContact.id ? { ...formData, id: c.id, lastContact: new Date().toISOString().split('T')[0] } : c
+                    )
+                }));
+            } else {
+                const newContact = {
+                    ...formData,
+                    id: Date.now(),
+                    lastContact: new Date().toISOString().split('T')[0]
+                };
+                setData(prev => ({ ...prev, contacts: [...prev.contacts, newContact] }));
+            }
+            setIsModalOpen(false);
+            setEditingContact(null);
+            setFormData({ name: '', email: '', phone: '', company: '', status: 'lead' });
+        };
+
+        const handleEdit = (contact) => {
+            setEditingContact(contact);
+            setFormData(contact);
+            setIsModalOpen(true);
+        };
+
+        const handleDelete = (id) => {
+            if (confirm('Are you sure you want to delete this contact?')) {
+                setData(prev => ({ ...prev, contacts: prev.contacts.filter(c => c.id !== id) }));
+            }
+        };
+
+        const openAddModal = () => {
+            setEditingContact(null);
+            setFormData({ name: '', email: '', phone: '', company: '', status: 'lead' });
+            setIsModalOpen(true);
+        };
+
+        return (
+            <div className="space-y-6 fade-in">
+                <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+                    <div>
+                        <h2 className="text-2xl font-bold text-gray-900">Contacts</h2>
+                        <p className="text-gray-500 mt-1">Manage your customer relationships</p>
+                    </div>
+                    <Button onClick={openAddModal} icon={Icons.Plus}>
+                        Add Contact
+                    </Button>
+                </div>
+
+                <Card>
+                    <div className="p-4 border-b border-gray-200 flex flex-col sm:flex-row gap-4">
+                        <div className="relative flex-1">
+                            <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                                <Icons.Search />
+                            </div>
+                            <input
+                                type="text"
+                                placeholder="Search contacts..."
+                                className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent"
+                                value={searchTerm}
+                                onChange={(e) => setSearchTerm(e.target.value)}
+                            />
+                        </div>
+                        <Button variant="secondary" icon={Icons.Filter} className="sm:w-auto w-full">
+                            Filter
+                        </Button>
+                    </div>
+
+                    <div className="overflow-x-auto custom-scrollbar">
+                        <table className="w-full">
+                            <thead className="bg-gray-50 border-b border-gray-200">
+                            <tr>
+                                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Name</th>
+                                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Contact Info</th>
+                                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Company</th>
+                                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Status</th>
+                                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Last Contact</th>
+                                <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">Actions</th>
+                            </tr>
+                            </thead>
+                            <tbody className="bg-white divide-y divide-gray-200">
+                            {filteredContacts.map((contact) => (
+                                <tr key={contact.id} className="hover:bg-gray-50 transition-colors">
+                                    <td className="px-6 py-4 whitespace-nowrap">
+                                        <div className="flex items-center">
+                                            <div className="h-10 w-10 rounded-full bg-primary-100 flex items-center justify-center text-primary-600 font-semibold">
+                                                {contact.name.split(' ').map(n => n[0]).join('')}
+                                            </div>
+                                            <div className="ml-4">
+                                                <div className="text-sm font-medium text-gray-900">{contact.name}</div>
+                                            </div>
+                                        </div>
+                                    </td>
+                                    <td className="px-6 py-4 whitespace-nowrap">
+                                        <div className="text-sm text-gray-900 flex items-center gap-2">
+                                            <Icons.Mail /> {contact.email}
+                                        </div>
+                                        <div className="text-sm text-gray-500 flex items-center gap-2 mt-1">
+                                            <Icons.Phone /> {contact.phone}
+                                        </div>
+                                    </td>
+                                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                                        {contact.company}
+                                    </td>
+                                    <td className="px-6 py-4 whitespace-nowrap">
+                                        <Badge variant={
+                                            contact.status === 'active' ? 'success' :
+                                                contact.status === 'lead' ? 'warning' : 'default'
+                                        }>
+                                            {contact.status}
+                                        </Badge>
+                                    </td>
+                                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                                        {contact.lastContact}
+                                    </td>
+                                    <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
+                                        <div className="flex items-center justify-end gap-2">
+                                            <button onClick={() => handleEdit(contact)} className="text-primary-600 hover:text-primary-900">
+                                                <Icons.Edit />
+                                            </button>
+                                            <button onClick={() => handleDelete(contact.id)} className="text-red-600 hover:text-red-900">
+                                                <Icons.Trash2 />
+                                            </button>
+                                        </div>
+                                    </td>
+                                </tr>
+                            ))}
+                            </tbody>
+                        </table>
+                    </div>
+                </Card>
+
+                <Modal
+                    isOpen={isModalOpen}
+                    onClose={() => setIsModalOpen(false)}
+                    title={editingContact ? "Edit Contact" : "Add New Contact"}
+                >
+                    <form onSubmit={handleSubmit} className="space-y-4">
+                        <div>
+                            <label className="block text-sm font-medium text-gray-700 mb-1">Full Name</label>
+                            <input
+                                type="text"
+                                required
+                                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent"
+                                value={formData.name}
+                                onChange={(e) => setFormData({...formData, name: e.target.value})}
+                            />
+                        </div>
+                        <div className="grid grid-cols-2 gap-4">
+                            <div>
+                                <label className="block text-sm font-medium text-gray-700 mb-1">Email</label>
+                                <input
+                                    type="email"
+                                    required
+                                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent"
+                                    value={formData.email}
+                                    onChange={(e) => setFormData({...formData, email: e.target.value})}
+                                />
+                            </div>
+                            <div>
+                                <label className="block text-sm font-medium text-gray-700 mb-1">Phone</label>
+                                <input
+                                    type="tel"
+                                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent"
+                                    value={formData.phone}
+                                    onChange={(e) => setFormData({...formData, phone: e.target.value})}
+                                />
+                            </div>
+                        </div>
+                        <div>
+                            <label className="block text-sm font-medium text-gray-700 mb-1">Company</label>
+                            <input
+                                type="text"
+                                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent"
+                                value={formData.company}
+                                onChange={(e) => setFormData({...formData, company: e.target.value})}
+                            />
+                        </div>
+                        <div>
+                            <label className="block text-sm font-medium text-gray-700 mb-1">Status</label>
+                            <select
+                                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent"
+                                value={formData.status}
+                                onChange={(e) => setFormData({...formData, status: e.target.value})}
+                            >
+                                <option value="lead">Lead</option>
+                                <option value="active">Active</option>
+                                <option value="inactive">Inactive</option>
+                            </select>
+                        </div>
+                        <div className="flex justify-end gap-3 pt-4">
+                            <Button type="button" variant="secondary" onClick={() => setIsModalOpen(false)}>
+                                Cancel
+                            </Button>
+                            <Button type="submit">
+                                {editingContact ? 'Update' : 'Create'}
+                            </Button>
+                        </div>
+                    </form>
+                </Modal>
+            </div>
+        );
+    };
+
+    // Companies View
+    const Companies = ({ data }) => (
+        <div className="space-y-6 fade-in">
+            <div className="flex justify-between items-center">
+                <div>
+                    <h2 className="text-2xl font-bold text-gray-900">Companies</h2>
+                    <p className="text-gray-500 mt-1">Manage your accounts and organizations</p>
+                </div>
+                <Button icon={Icons.Plus}>Add Company</Button>
+            </div>
+
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                {data.companies.map((company) => (
+                    <Card key={company.id} className="p-6 hover:shadow-md transition-shadow">
+                        <div className="flex items-start justify-between">
+                            <div className="h-12 w-12 rounded-lg bg-gradient-to-br from-primary-500 to-purple-600 flex items-center justify-center text-white text-xl font-bold">
+                                {company.name[0]}
+                            </div>
+                            <Badge variant={company.status === 'customer' ? 'success' : 'warning'}>
+                                {company.status}
+                            </Badge>
+                        </div>
+                        <h3 className="mt-4 text-lg font-semibold text-gray-900">{company.name}</h3>
+                        <p className="text-sm text-gray-500">{company.industry}</p>
+
+                        <div className="mt-4 space-y-2">
+                            <div className="flex items-center gap-2 text-sm text-gray-600">
+                                <Icons.Users />
+                                <span>{company.employees} employees</span>
+                            </div>
+                            <div className="flex items-center gap-2 text-sm text-gray-600">
+                                <Icons.DollarSign />
+                                <span>{company.revenue} ARR</span>
+                            </div>
+                        </div>
+
+                        <div className="mt-4 pt-4 border-t border-gray-100 flex justify-between items-center">
+                            <span className="text-sm text-gray-500">{company.location}</span>
+                            <button className="text-primary-600 hover:text-primary-700 text-sm font-medium">
+                                View Details
+                            </button>
+                        </div>
+                    </Card>
+                ))}
+            </div>
+        </div>
+    );
+
+    // Pipeline View
+    const Pipeline = ({ data }) => {
+        const stages = [
+            { id: 'new', name: 'New', color: 'bg-gray-500' },
+            { id: 'qualified', name: 'Qualified', color: 'bg-blue-500' },
+            { id: 'proposal', name: 'Proposal', color: 'bg-yellow-500' },
+            { id: 'negotiation', name: 'Negotiation', color: 'bg-purple-500' },
+            { id: 'closed-won', name: 'Closed Won', color: 'bg-green-500' }
+        ];
+
+        return (
+            <div className="space-y-6 fade-in">
+                <div className="flex justify-between items-center">
+                    <div>
+                        <h2 className="text-2xl font-bold text-gray-900">Sales Pipeline</h2>
+                        <p className="text-gray-500 mt-1">Track your deals and opportunities</p>
+                    </div>
+                    <Button icon={Icons.Plus}>Add Deal</Button>
+                </div>
+
+                <div className="flex gap-6 overflow-x-auto pb-4 custom-scrollbar h-[calc(100vh-300px)]">
+                    {stages.map((stage) => {
+                        const stageDeals = data.deals.filter(d => d.stage === stage.id);
+                        const totalValue = stageDeals.reduce((sum, d) => sum + d.value, 0);
+
+                        return (
+                            <div key={stage.id} className="flex-shrink-0 w-80">
+                                <div className="flex items-center justify-between mb-4">
+                                    <div className="flex items-center gap-2">
+                                        <div className={`w-3 h-3 rounded-full ${stage.color}`} />
+                                        <h3 className="font-semibold text-gray-900">{stage.name}</h3>
+                                        <span className="text-sm text-gray-500">({stageDeals.length})</span>
+                                    </div>
+                                </div>
+
+                                <div className="space-y-3">
+                                    {stageDeals.map((deal) => (
+                                        <Card key={deal.id} className="p-4 hover:shadow-md transition-shadow cursor-pointer">
+                                            <div className="flex justify-between items-start mb-2">
+                                                <h4 className="font-medium text-gray-900 text-sm">{deal.title}</h4>
+                                                <button className="text-gray-400 hover:text-gray-600">
+                                                    <Icons.MoreVertical />
+                                                </button>
+                                            </div>
+                                            <p className="text-sm text-gray-500 mb-3">{deal.company}</p>
+                                            <div className="flex items-center justify-between">
+                                                    <span className="text-sm font-semibold text-gray-900">
+                                                        ${deal.value.toLocaleString()}
+                                                    </span>
+                                                <span className="text-xs text-gray-500">
+                                                        {deal.probability}% prob
+                                                    </span>
+                                            </div>
+                                            <div className="mt-2 text-xs text-gray-400 flex items-center gap-1">
+                                                <Icons.Calendar />
+                                                Close: {deal.closeDate}
+                                            </div>
+                                        </Card>
+                                    ))}
+                                </div>
+
+                                <div className="mt-4 p-3 bg-gray-50 rounded-lg border border-gray-200">
+                                    <div className="flex justify-between text-sm">
+                                        <span className="text-gray-600">Total Value</span>
+                                        <span className="font-semibold text-gray-900">
+                                                ${totalValue.toLocaleString()}
+                                            </span>
+                                    </div>
+                                </div>
+                            </div>
+                        );
+                    })}
+                </div>
+            </div>
+        );
+    };
+
+    // Sidebar Component
+    const Sidebar = ({ currentView, setCurrentView, isOpen, setIsOpen }) => {
+        const menuItems = [
+            { id: 'dashboard', label: 'Dashboard', icon: Icons.LayoutDashboard },
+            { id: 'contacts', label: 'Contacts', icon: Icons.Users },
+            { id: 'companies', label: 'Companies', icon: Icons.Building2 },
+            { id: 'pipeline', label: 'Pipeline', icon: Icons.Pipeline },
+            { id: 'settings', label: 'Settings', icon: Icons.Settings },
+        ];
+
+        const NavItem = ({ item }) => (
+            <button
+                onClick={() => {
+                    setCurrentView(item.id);
+                    setIsOpen(false);
+                }}
+                className={`w-full flex items-center gap-3 px-4 py-3 rounded-lg transition-all duration-200 ${
+                    currentView === item.id
+                        ? 'bg-primary-50 text-primary-700 font-medium'
+                        : 'text-gray-600 hover:bg-gray-50 hover:text-gray-900'
+                }`}
+            >
+                <item.icon />
+                <span>{item.label}</span>
+                {currentView === item.id && (
+                    <div className="ml-auto w-1.5 h-1.5 rounded-full bg-primary-600" />
+                )}
+            </button>
+        );
+
+        return (
+            <>
+                {/* Mobile overlay */}
+                {isOpen && (
+                    <div
+                        className="fixed inset-0 bg-black bg-opacity-50 z-40 lg:hidden"
+                        onClick={() => setIsOpen(false)}
+                    />
+                )}
+
+                {/* Sidebar */}
+                <aside className={`
+                        fixed lg:static inset-y-0 left-0 z-50 w-64 bg-white border-r border-gray-200 transform transition-transform duration-300 ease-in-out
+                        ${isOpen ? 'translate-x-0' : '-translate-x-full lg:translate-x-0'}
+                    `}>
+                    <div className="h-full flex flex-col">
+                        <div className="p-6 border-b border-gray-200">
+                            <div className="flex items-center gap-3">
+                                <div className="w-8 h-8 bg-gradient-to-br from-primary-600 to-purple-600 rounded-lg flex items-center justify-center text-white font-bold">
+                                    N
+                                </div>
+                                <span className="text-xl font-bold text-gray-900">Nexus CRM</span>
+                            </div>
+                        </div>
+
+                        <nav className="flex-1 p-4 space-y-1">
+                            {menuItems.map(item => (
+                                <NavItem key={item.id} item={item} />
+                            ))}
+                        </nav>
+
+                        <div className="p-4 border-t border-gray-200">
+                            <div className="flex items-center gap-3 px-4 py-3">
+                                <div className="w-8 h-8 rounded-full bg-gray-300 flex items-center justify-center text-gray-600 font-medium">
+                                    JD
+                                </div>
+                                <div className="flex-1 min-w-0">
+                                    <p className="text-sm font-medium text-gray-900 truncate">John Doe</p>
+                                    <p className="text-xs text-gray-500 truncate">john@nexus.com</p>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </aside>
+            </>
+        );
+    };
+
+    // Main App Component
+    const App = () => {
+        const [currentView, setCurrentView] = useState('dashboard');
+        const [sidebarOpen, setSidebarOpen] = useState(false);
+        const [data, setData] = useState(generateMockData());
+
+        useEffect(() => {
+            lucide.createIcons();
+        }, [currentView, data]);
+
+        const renderView = () => {
+            switch(currentView) {
+                case 'dashboard':
+                    return <Dashboard data={data} />;
+                case 'contacts':
+                    return <Contacts data={data} setData={setData} />;
+                case 'companies':
+                    return <Companies data={data} />;
+                case 'pipeline':
+                    return <Pipeline data={data} />;
+                case 'settings':
+                    return (
+                        <div className="fade-in">
+                            <h2 className="text-2xl font-bold text-gray-900 mb-6">Settings</h2>
+                            <Card className="p-6 max-w-2xl">
+                                <p className="text-gray-600">Settings panel coming soon...</p>
+                            </Card>
+                        </div>
+                    );
+                default:
+                    return <Dashboard data={data} />;
+            }
+        };
+
+        return (
+            <div className="min-h-screen flex bg-gray-50">
+                <Sidebar
+                    currentView={currentView}
+                    setCurrentView={setCurrentView}
+                    isOpen={sidebarOpen}
+                    setIsOpen={setSidebarOpen}
+                />
+
+                <div className="flex-1 flex flex-col min-w-0">
+                    <header className="bg-white border-b border-gray-200 sticky top-0 z-30">
+                        <div className="flex items-center justify-between px-4 py-4 lg:px-8">
+                            <button
+                                onClick={() => setSidebarOpen(true)}
+                                className="lg:hidden p-2 rounded-lg hover:bg-gray-100"
+                            >
+                                <Icons.Menu />
+                            </button>
+
+                            <div className="flex items-center gap-4 ml-auto">
+                                <button className="p-2 text-gray-400 hover:text-gray-600 relative">
+                                    <Icons.Bell />
+                                    <span className="absolute top-1.5 right-1.5 w-2 h-2 bg-red-500 rounded-full" />
+                                </button>
+                                <div className="h-8 w-px bg-gray-200" />
+                                <span className="text-sm text-gray-600 hidden sm:block">
+                                        {new Date().toLocaleDateString('en-US', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })}
+                                    </span>
+                            </div>
+                        </div>
+                    </header>
+
+                    <main className="flex-1 p-4 lg:p-8 overflow-auto">
+                        <div className="max-w-7xl mx-auto">
+                            {renderView()}
+                        </div>
+                    </main>
+                </div>
+            </div>
+        );
+    };
+
+    // Mount the app
+    const root = ReactDOM.createRoot(document.getElementById('root'));
+    root.render(<App />);
+</script>
+</body>
+</html>

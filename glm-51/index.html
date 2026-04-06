@@ -1,0 +1,954 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>NexusCRM - Modern Customer Relations</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
+    <script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
+    <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Space+Grotesk:wght@500;700&display=swap" rel="stylesheet">
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        navy: { 900: '#0a1628', 800: '#0f2341', 700: '#16305c', 600: '#1e3a5f' },
+                        teal: { 400: '#2dd4bf', 500: '#14b8a6', 600: '#0d9488' },
+                        coral: { 400: '#fb7185', 500: '#f43f5e' },
+                        amber: { 400: '#fbbf24', 500: '#f59e0b' },
+                        emerald: { 400: '#34d399', 500: '#10b981' },
+                    },
+                    fontFamily: {
+                        display: ['Space Grotesk', 'sans-serif'],
+                        sans: ['Inter', 'sans-serif'],
+                    }
+                }
+            }
+        }
+    </script>
+    <style>
+        * { box-sizing: border-box; }
+        body { margin: 0; font-family: 'Inter', sans-serif; background: #0a1628; }
+
+        @keyframes float {
+            0%, 100% { transform: translateY(0) rotate(0deg); }
+            50% { transform: translateY(-20px) rotate(5deg); }
+        }
+        @keyframes pulse-glow {
+            0%, 100% { box-shadow: 0 0 20px rgba(45, 212, 191, 0.3); }
+            50% { box-shadow: 0 0 40px rgba(45, 212, 191, 0.6); }
+        }
+        @keyframes slide-up {
+            from { opacity: 0; transform: translateY(20px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+        @keyframes counter {
+            from { opacity: 0; transform: scale(0.5); }
+            to { opacity: 1; transform: scale(1); }
+        }
+        @keyframes shimmer {
+            0% { background-position: -200% 0; }
+            100% { background-position: 200% 0; }
+        }
+        .animate-float { animation: float 6s ease-in-out infinite; }
+        .animate-pulse-glow { animation: pulse-glow 2s ease-in-out infinite; }
+        .animate-slide-up { animation: slide-up 0.5s ease-out forwards; }
+        .animate-counter { animation: counter 0.6s ease-out forwards; }
+
+        .glass-card {
+            background: rgba(255, 255, 255, 0.03);
+            backdrop-filter: blur(20px);
+            border: 1px solid rgba(255, 255, 255, 0.08);
+        }
+        .gradient-border {
+            background: linear-gradient(135deg, rgba(45, 212, 191, 0.2), rgba(251, 113, 133, 0.2));
+            padding: 1px;
+        }
+        .gradient-border > div { background: #0f2341; }
+
+        .particle {
+            position: absolute;
+            width: 4px;
+            height: 4px;
+            background: radial-gradient(circle, rgba(45, 212, 191, 0.8), transparent);
+            border-radius: 50%;
+            pointer-events: none;
+        }
+
+        .stat-card:hover .stat-icon { transform: scale(1.2) rotate(10deg); }
+        .stat-icon { transition: transform 0.3s ease; }
+
+        .deal-card { transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1); }
+        .deal-card:hover { transform: translateY(-4px) scale(1.02); }
+
+        .nav-item { position: relative; overflow: hidden; }
+        .nav-item::before {
+            content: '';
+            position: absolute;
+            left: 0;
+            top: 0;
+            height: 100%;
+            width: 3px;
+            background: linear-gradient(180deg, #2dd4bf, #14b8a6);
+            transform: scaleY(0);
+            transition: transform 0.3s ease;
+        }
+        .nav-item:hover::before, .nav-item.active::before { transform: scaleY(1); }
+
+        ::-webkit-scrollbar { width: 6px; height: 6px; }
+        ::-webkit-scrollbar-track { background: rgba(255,255,255,0.05); }
+        ::-webkit-scrollbar-thumb { background: rgba(45, 212, 191, 0.3); border-radius: 3px; }
+        ::-webkit-scrollbar-thumb:hover { background: rgba(45, 212, 191, 0.5); }
+
+        .modal-backdrop { backdrop-filter: blur(8px); }
+    </style>
+</head>
+<body>
+<div id="root"></div>
+<script type="text/babel">
+    const { useState, useEffect, useRef, useCallback, useMemo } = React;
+
+    // Sample Data
+    const initialContacts = [
+        { id: 1, name: 'Alexandra Chen', email: 'a.chen@techcorp.com', company: 'TechCorp Industries', status: 'active', value: 125000, avatar: 'AC', lastContact: '2 hours ago' },
+        { id: 2, name: 'Marcus Williams', email: 'm.williams@innovate.io', company: 'Innovate Labs', status: 'lead', value: 85000, avatar: 'MW', lastContact: '1 day ago' },
+        { id: 3, name: 'Sarah Mitchell', email: 's.mitchell@globalfn.com', company: 'Global Financial', status: 'active', value: 250000, avatar: 'SM', lastContact: '3 hours ago' },
+        { id: 4, name: 'David Park', email: 'd.park@nexgen.co', company: 'NexGen Solutions', status: 'prospect', value: 45000, avatar: 'DP', lastContact: '5 days ago' },
+        { id: 5, name: 'Emma Rodriguez', email: 'e.rodriguez@mediacorp.com', company: 'MediaCorp', status: 'active', value: 180000, avatar: 'ER', lastContact: '12 hours ago' },
+        { id: 6, name: 'James Thompson', email: 'j.thompson@retailgiant.com', company: 'Retail Giant Inc', status: 'lead', value: 95000, avatar: 'JT', lastContact: '2 days ago' },
+    ];
+
+    const initialDeals = [
+        { id: 1, title: 'Enterprise License Deal', company: 'TechCorp Industries', value: 125000, stage: 'qualified', probability: 60, contact: 'Alexandra Chen' },
+        { id: 2, title: 'Annual Subscription', company: 'Innovate Labs', value: 85000, stage: 'proposal', probability: 40, contact: 'Marcus Williams' },
+        { id: 3, title: 'Platform Integration', company: 'Global Financial', value: 250000, stage: 'negotiation', probability: 80, contact: 'Sarah Mitchell' },
+        { id: 4, title: 'Starter Package', company: 'NexGen Solutions', value: 45000, stage: 'lead', probability: 20, contact: 'David Park' },
+        { id: 5, title: 'Media Suite License', company: 'MediaCorp', value: 180000, stage: 'closed', probability: 100, contact: 'Emma Rodriguez' },
+        { id: 6, title: 'E-commerce Integration', company: 'Retail Giant Inc', value: 95000, stage: 'proposal', probability: 50, contact: 'James Thompson' },
+    ];
+
+    const activities = [
+        { id: 1, type: 'deal', message: 'Deal closed: Media Suite License', time: '10 minutes ago', icon: 'check' },
+        { id: 2, type: 'email', message: 'Email sent to Alexandra Chen', time: '2 hours ago', icon: 'mail' },
+        { id: 3, type: 'call', message: 'Call scheduled with Sarah Mitchell', time: '3 hours ago', icon: 'phone' },
+        { id: 4, type: 'note', message: 'Note added to Global Financial', time: '5 hours ago', icon: 'file' },
+        { id: 5, type: 'meeting', message: 'Meeting completed with Innovate Labs', time: '1 day ago', icon: 'users' },
+    ];
+
+    // Particle Background Component
+    const ParticleBackground = () => {
+        const canvasRef = useRef(null);
+
+        useEffect(() => {
+            const canvas = canvasRef.current;
+            const ctx = canvas.getContext('2d');
+            let animationId;
+            const particles = [];
+
+            const resize = () => {
+                canvas.width = window.innerWidth;
+                canvas.height = window.innerHeight;
+            };
+            resize();
+            window.addEventListener('resize', resize);
+
+            for (let i = 0; i < 50; i++) {
+                particles.push({
+                    x: Math.random() * canvas.width,
+                    y: Math.random() * canvas.height,
+                    vx: (Math.random() - 0.5) * 0.5,
+                    vy: (Math.random() - 0.5) * 0.5,
+                    size: Math.random() * 2 + 1,
+                    alpha: Math.random() * 0.5 + 0.2
+                });
+            }
+
+            const animate = () => {
+                ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+                particles.forEach((p, i) => {
+                    p.x += p.vx;
+                    p.y += p.vy;
+
+                    if (p.x < 0 || p.x > canvas.width) p.vx *= -1;
+                    if (p.y < 0 || p.y > canvas.height) p.vy *= -1;
+
+                    ctx.beginPath();
+                    const gradient = ctx.createRadialGradient(p.x, p.y, 0, p.x, p.y, p.size * 2);
+                    gradient.addColorStop(0, `rgba(45, 212, 191, ${p.alpha})`);
+                    gradient.addColorStop(1, 'transparent');
+                    ctx.fillStyle = gradient;
+                    ctx.arc(p.x, p.y, p.size * 2, 0, Math.PI * 2);
+                    ctx.fill();
+
+                    particles.forEach((p2, j) => {
+                        if (i === j) return;
+                        const dx = p.x - p2.x;
+                        const dy = p.y - p2.y;
+                        const dist = Math.sqrt(dx * dx + dy * dy);
+                        if (dist < 150) {
+                            ctx.beginPath();
+                            ctx.strokeStyle = `rgba(45, 212, 191, ${0.1 * (1 - dist / 150)})`;
+                            ctx.lineWidth = 0.5;
+                            ctx.moveTo(p.x, p.y);
+                            ctx.lineTo(p2.x, p2.y);
+                            ctx.stroke();
+                        }
+                    });
+                });
+
+                animationId = requestAnimationFrame(animate);
+            };
+            animate();
+
+            return () => {
+                cancelAnimationFrame(animationId);
+                window.removeEventListener('resize', resize);
+            };
+        }, []);
+
+        return <canvas ref={canvasRef} className="fixed inset-0 pointer-events-none" style={{ zIndex: 0 }} />;
+    };
+
+    // Animated Counter
+    const AnimatedCounter = ({ value, duration = 1000, prefix = '', suffix = '' }) => {
+        const [displayValue, setDisplayValue] = useState(0);
+
+        useEffect(() => {
+            const startTime = Date.now();
+            const animate = () => {
+                const elapsed = Date.now() - startTime;
+                const progress = Math.min(elapsed / duration, 1);
+                const eased = 1 - Math.pow(1 - progress, 3);
+                setDisplayValue(Math.floor(value * eased));
+                if (progress < 1) requestAnimationFrame(animate);
+            };
+            animate();
+        }, [value, duration]);
+
+        return <span>{prefix}{displayValue.toLocaleString()}{suffix}</span>;
+    };
+
+    // Icon Components
+    const Icons = {
+        Dashboard: () => (
+            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 5a1 1 0 011-1h14a1 1 0 011 1v2a1 1 0 01-1 1H5a1 1 0 01-1-1V5zM4 13a1 1 0 011-1h6a1 1 0 011 1v6a1 1 0 01-1 1H5a1 1 0 01-1-1v-6zM16 13a1 1 0 011-1h2a1 1 0 011 1v6a1 1 0 01-1 1h-2a1 1 0 01-1-1v-6z" />
+            </svg>
+        ),
+        Users: () => (
+            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z" />
+            </svg>
+        ),
+        Deals: () => (
+            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
+            </svg>
+        ),
+        Activity: () => (
+            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 10V3L4 14h7v7l9-11h-7z" />
+            </svg>
+        ),
+        Settings: () => (
+            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z" />
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+            </svg>
+        ),
+        Search: () => (
+            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+            </svg>
+        ),
+        Plus: () => (
+            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
+            </svg>
+        ),
+        Close: () => (
+            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+            </svg>
+        ),
+        TrendUp: () => (
+            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 7h8m0 0v8m0-8l-8 8-4-4-6 6" />
+            </svg>
+        ),
+        DollarSign: () => (
+            <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+            </svg>
+        ),
+        Target: () => (
+            <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
+            </svg>
+        ),
+        Check: () => (
+            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+            </svg>
+        ),
+        Mail: () => (
+            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
+            </svg>
+        ),
+        Phone: () => (
+            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 5a2 2 0 012-2h3.28a1 1 0 01.948.684l1.498 4.493a1 1 0 01-.502 1.21l-2.257 1.13a11.042 11.042 0 005.516 5.516l1.13-2.257a1 1 0 011.21-.502l4.493 1.498a1 1 0 01.684.949V19a2 2 0 01-2 2h-1C9.716 21 3 14.284 3 6V5z" />
+            </svg>
+        ),
+        File: () => (
+            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+            </svg>
+        ),
+        Calendar: () => (
+            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
+            </svg>
+        ),
+    };
+
+    // Sidebar Component
+    const Sidebar = ({ currentPage, setCurrentPage }) => {
+        const navItems = [
+            { id: 'dashboard', label: 'Dashboard', icon: Icons.Dashboard },
+            { id: 'contacts', label: 'Contacts', icon: Icons.Users },
+            { id: 'deals', label: 'Deals Pipeline', icon: Icons.Deals },
+            { id: 'activity', label: 'Activity', icon: Icons.Activity },
+        ];
+
+        return (
+            <aside className="fixed left-0 top-0 h-full w-64 bg-navy-900 border-r border-white/10 flex flex-col z-20">
+                <div className="p-6 border-b border-white/10">
+                    <h1 className="font-display text-2xl font-bold text-white flex items-center gap-2">
+                        <span className="w-8 h-8 rounded-lg bg-gradient-to-br from-teal-400 to-teal-600 flex items-center justify-center text-sm">N</span>
+                        NexusCRM
+                    </h1>
+                </div>
+
+                <nav className="flex-1 p-4">
+                    <ul className="space-y-2">
+                        {navItems.map((item, index) => (
+                            <li key={item.id} style={{ animationDelay: `${index * 0.1}s` }} className="animate-slide-up opacity-0">
+                                <button
+                                    onClick={() => setCurrentPage(item.id)}
+                                    className={`nav-item w-full flex items-center gap-3 px-4 py-3 rounded-lg transition-all duration-300 ${
+                                        currentPage === item.id
+                                            ? 'bg-white/10 text-teal-400 active'
+                                            : 'text-slate-400 hover:text-white hover:bg-white/5'
+                                    }`}
+                                >
+                                    <item.icon />
+                                    <span className="font-medium">{item.label}</span>
+                                </button>
+                            </li>
+                        ))}
+                    </ul>
+                </nav>
+
+                <div className="p-4 border-t border-white/10">
+                    <div className="glass-card rounded-xl p-4">
+                        <div className="flex items-center gap-3">
+                            <div className="w-10 h-10 rounded-full bg-gradient-to-br from-coral-400 to-coral-500 flex items-center justify-center text-white font-semibold">
+                                JD
+                            </div>
+                            <div>
+                                <p className="text-white font-medium text-sm">John Doe</p>
+                                <p className="text-slate-400 text-xs">Admin</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </aside>
+        );
+    };
+
+    // Dashboard Page
+    const DashboardPage = ({ contacts, deals }) => {
+        const totalRevenue = deals.filter(d => d.stage === 'closed').reduce((sum, d) => sum + d.value, 0);
+        const activeDeals = deals.filter(d => d.stage !== 'closed' && d.stage !== 'lead').length;
+        const conversionRate = Math.round((deals.filter(d => d.stage === 'closed').length / deals.length) * 100);
+
+        const stats = [
+            { label: 'Total Revenue', value: totalRevenue, prefix: '$', suffix: '', change: '+12.5%', color: 'teal', icon: Icons.DollarSign },
+            { label: 'Active Contacts', value: contacts.length, prefix: '', suffix: '', change: '+8.2%', color: 'coral', icon: Icons.Users },
+            { label: 'Active Deals', value: activeDeals, prefix: '', suffix: '', change: '+3.1%', color: 'amber', icon: Icons.Target },
+            { label: 'Conversion Rate', value: conversionRate, prefix: '', suffix: '%', change: '+5.4%', color: 'emerald', icon: Icons.TrendUp },
+        ];
+
+        const recentActivities = activities.slice(0, 5);
+
+        return (
+            <div className="space-y-6">
+                <div className="flex items-center justify-between">
+                    <div>
+                        <h2 className="font-display text-3xl font-bold text-white">Dashboard</h2>
+                        <p className="text-slate-400 mt-1">Welcome back, here's your overview</p>
+                    </div>
+                    <div className="text-right">
+                        <p className="text-slate-400 text-sm">Today</p>
+                        <p className="text-white font-medium">{new Date().toLocaleDateString('en-US', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })}</p>
+                    </div>
+                </div>
+
+                {/* Stats Grid */}
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+                    {stats.map((stat, index) => (
+                        <div
+                            key={stat.label}
+                            className={`stat-card glass-card rounded-xl p-6 animate-slide-up opacity-0`}
+                            style={{ animationDelay: `${index * 0.1}s` }}
+                        >
+                            <div className="flex items-start justify-between">
+                                <div>
+                                    <p className="text-slate-400 text-sm font-medium">{stat.label}</p>
+                                    <p className={`text-3xl font-bold mt-2 text-${stat.color}-400`}>
+                                        <AnimatedCounter value={stat.value} prefix={stat.prefix} suffix={stat.suffix} />
+                                    </p>
+                                </div>
+                                <div className={`stat-icon w-12 h-12 rounded-xl bg-${stat.color}-400/20 flex items-center justify-center text-${stat.color}-400`}>
+                                    <stat.icon />
+                                </div>
+                            </div>
+                            <div className="mt-4 flex items-center gap-2">
+                                <span className="text-emerald-400 text-sm font-medium">{stat.change}</span>
+                                <span className="text-slate-500 text-sm">vs last month</span>
+                            </div>
+                        </div>
+                    ))}
+                </div>
+
+                {/* Charts Row */}
+                <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+                    {/* Pipeline Overview */}
+                    <div className="lg:col-span-2 glass-card rounded-xl p-6 animate-slide-up opacity-0" style={{ animationDelay: '0.4s' }}>
+                        <h3 className="font-display text-lg font-semibold text-white mb-6">Pipeline Overview</h3>
+                        <PipelineChart deals={deals} />
+                    </div>
+
+                    {/* Recent Activity */}
+                    <div className="glass-card rounded-xl p-6 animate-slide-up opacity-0" style={{ animationDelay: '0.5s' }}>
+                        <h3 className="font-display text-lg font-semibold text-white mb-6">Recent Activity</h3>
+                        <div className="space-y-4">
+                            {recentActivities.map((activity, i) => (
+                                <div key={activity.id} className="flex items-start gap-3 group">
+                                    <div className={`w-8 h-8 rounded-lg flex items-center justify-center shrink-0 ${
+                                        activity.type === 'deal' ? 'bg-emerald-400/20 text-emerald-400' :
+                                            activity.type === 'email' ? 'bg-teal-400/20 text-teal-400' :
+                                                activity.type === 'call' ? 'bg-amber-400/20 text-amber-400' :
+                                                    activity.type === 'note' ? 'bg-coral-400/20 text-coral-400' :
+                                                        'bg-slate-400/20 text-slate-400'
+                                    }`}>
+                                        {activity.icon === 'check' && <Icons.Check />}
+                                        {activity.icon === 'mail' && <Icons.Mail />}
+                                        {activity.icon === 'phone' && <Icons.Phone />}
+                                        {activity.icon === 'file' && <Icons.File />}
+                                        {activity.icon === 'users' && <Icons.Users />}
+                                    </div>
+                                    <div className="flex-1 min-w-0">
+                                        <p className="text-white text-sm truncate">{activity.message}</p>
+                                        <p className="text-slate-500 text-xs mt-1">{activity.time}</p>
+                                    </div>
+                                </div>
+                            ))}
+                        </div>
+                    </div>
+                </div>
+
+                {/* Top Contacts */}
+                <div className="glass-card rounded-xl p-6 animate-slide-up opacity-0" style={{ animationDelay: '0.6s' }}>
+                    <h3 className="font-display text-lg font-semibold text-white mb-6">Top Contacts</h3>
+                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                        {contacts.slice(0, 6).map((contact, i) => (
+                            <div key={contact.id} className="flex items-center gap-4 p-4 rounded-lg bg-white/5 hover:bg-white/10 transition-all duration-300 cursor-pointer group">
+                                <div className="w-12 h-12 rounded-full bg-gradient-to-br from-teal-400 to-teal-600 flex items-center justify-center text-white font-semibold">
+                                    {contact.avatar}
+                                </div>
+                                <div className="flex-1 min-w-0">
+                                    <p className="text-white font-medium truncate group-hover:text-teal-400 transition-colors">{contact.name}</p>
+                                    <p className="text-slate-400 text-sm truncate">{contact.company}</p>
+                                </div>
+                                <div className="text-right">
+                                    <p className="text-teal-400 font-semibold">${(contact.value / 1000).toFixed(0)}K</p>
+                                </div>
+                            </div>
+                        ))}
+                    </div>
+                </div>
+            </div>
+        );
+    };
+
+    // Pipeline Chart
+    const PipelineChart = ({ deals }) => {
+        const stages = ['lead', 'qualified', 'proposal', 'negotiation', 'closed'];
+        const stageLabels = ['Lead', 'Qualified', 'Proposal', 'Negotiation', 'Closed'];
+        const stageColors = ['bg-slate-400', 'bg-amber-400', 'bg-coral-400', 'bg-teal-400', 'bg-emerald-400'];
+
+        const stageValues = stages.map(stage =>
+            deals.filter(d => d.stage === stage).reduce((sum, d) => sum + d.value, 0)
+        );
+        const maxValue = Math.max(...stageValues);
+
+        return (
+            <div className="flex items-end justify-between gap-4 h-48">
+                {stageValues.map((value, i) => (
+                    <div key={stages[i]} className="flex-1 flex flex-col items-center">
+                        <div className="w-full relative" style={{ height: '160px' }}>
+                            <div
+                                className={`absolute bottom-0 w-full ${stageColors[i]} rounded-t-lg transition-all duration-1000 ease-out`}
+                                style={{
+                                    height: `${(value / maxValue) * 100}%`,
+                                    animation: `growUp 1s ease-out ${i * 0.1}s forwards`
+                                }}
+                            />
+                        </div>
+                        <p className="text-slate-400 text-xs mt-2 text-center">{stageLabels[i]}</p>
+                        <p className="text-white font-semibold text-sm mt-1">${(value / 1000).toFixed(0)}K</p>
+                    </div>
+                ))}
+            </div>
+        );
+    };
+
+    // Contacts Page
+    const ContactsPage = ({ contacts, setContacts }) => {
+        const [searchTerm, setSearchTerm] = useState('');
+        const [filterStatus, setFilterStatus] = useState('all');
+        const [showModal, setShowModal] = useState(false);
+        const [newContact, setNewContact] = useState({ name: '', email: '', company: '', status: 'lead' });
+
+        const filteredContacts = useMemo(() => {
+            return contacts.filter(contact => {
+                const matchesSearch = contact.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+                    contact.company.toLowerCase().includes(searchTerm.toLowerCase()) ||
+                    contact.email.toLowerCase().includes(searchTerm.toLowerCase());
+                const matchesFilter = filterStatus === 'all' || contact.status === filterStatus;
+                return matchesSearch && matchesFilter;
+            });
+        }, [contacts, searchTerm, filterStatus]);
+
+        const statusColors = {
+            active: 'bg-emerald-400/20 text-emerald-400',
+            lead: 'bg-amber-400/20 text-amber-400',
+            prospect: 'bg-slate-400/20 text-slate-400',
+        };
+
+        const handleAddContact = () => {
+            if (newContact.name && newContact.email) {
+                const avatar = newContact.name.split(' ').map(n => n[0]).join('').toUpperCase();
+                setContacts([...contacts, {
+                    id: Date.now(),
+                    ...newContact,
+                    avatar,
+                    value: 0,
+                    lastContact: 'Just now'
+                }]);
+                setNewContact({ name: '', email: '', company: '', status: 'lead' });
+                setShowModal(false);
+            }
+        };
+
+        return (
+            <div className="space-y-6">
+                <div className="flex items-center justify-between">
+                    <div>
+                        <h2 className="font-display text-3xl font-bold text-white">Contacts</h2>
+                        <p className="text-slate-400 mt-1">Manage your customer relationships</p>
+                    </div>
+                    <button
+                        onClick={() => setShowModal(true)}
+                        className="flex items-center gap-2 px-4 py-2 bg-gradient-to-r from-teal-500 to-teal-600 text-white rounded-lg font-medium hover:from-teal-400 hover:to-teal-500 transition-all duration-300 animate-pulse-glow"
+                    >
+                        <Icons.Plus /> Add Contact
+                    </button>
+                </div>
+
+                {/* Search and Filter */}
+                <div className="flex gap-4 flex-wrap">
+                    <div className="relative flex-1 min-w-[250px]">
+                        <Icons.Search />
+                        <input
+                            type="text"
+                            placeholder="Search contacts..."
+                            value={searchTerm}
+                            onChange={(e) => setSearchTerm(e.target.value)}
+                            className="w-full pl-12 pr-4 py-3 bg-white/5 border border-white/10 rounded-lg text-white placeholder-slate-500 focus:outline-none focus:border-teal-400/50 transition-colors"
+                        />
+                        <div className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400">
+                            <Icons.Search />
+                        </div>
+                    </div>
+                    <div className="flex gap-2">
+                        {['all', 'active', 'lead', 'prospect'].map(status => (
+                            <button
+                                key={status}
+                                onClick={() => setFilterStatus(status)}
+                                className={`px-4 py-2 rounded-lg font-medium capitalize transition-all duration-300 ${
+                                    filterStatus === status
+                                        ? 'bg-teal-500 text-white'
+                                        : 'bg-white/5 text-slate-400 hover:text-white hover:bg-white/10'
+                                }`}
+                            >
+                                {status}
+                            </button>
+                        ))}
+                    </div>
+                </div>
+
+                {/* Contacts Grid */}
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                    {filteredContacts.map((contact, index) => (
+                        <div
+                            key={contact.id}
+                            className="glass-card rounded-xl p-6 hover:border-teal-400/30 transition-all duration-300 cursor-pointer group animate-slide-up opacity-0"
+                            style={{ animationDelay: `${index * 0.05}s` }}
+                        >
+                            <div className="flex items-start justify-between mb-4">
+                                <div className="w-14 h-14 rounded-full bg-gradient-to-br from-teal-400 to-coral-400 flex items-center justify-center text-white font-bold text-lg">
+                                    {contact.avatar}
+                                </div>
+                                <span className={`px-3 py-1 rounded-full text-xs font-medium ${statusColors[contact.status]}`}>
+                                        {contact.status}
+                                    </span>
+                            </div>
+                            <h3 className="text-white font-semibold text-lg group-hover:text-teal-400 transition-colors">{contact.name}</h3>
+                            <p className="text-slate-400 text-sm mt-1">{contact.company}</p>
+                            <p className="text-slate-500 text-sm mt-1">{contact.email}</p>
+                            <div className="mt-4 pt-4 border-t border-white/10 flex items-center justify-between">
+                                <span className="text-slate-500 text-sm">{contact.lastContact}</span>
+                                <span className="text-teal-400 font-semibold">${(contact.value / 1000).toFixed(0)}K</span>
+                            </div>
+                        </div>
+                    ))}
+                </div>
+
+                {/* Add Contact Modal */}
+                {showModal && (
+                    <div className="fixed inset-0 bg-black/50 modal-backdrop flex items-center justify-center z-50 p-4" onClick={(e) => e.target === e.currentTarget && setShowModal(false)}>
+                        <div className="glass-card rounded-2xl p-6 w-full max-w-md animate-slide-up">
+                            <div className="flex items-center justify-between mb-6">
+                                <h3 className="font-display text-xl font-bold text-white">Add New Contact</h3>
+                                <button onClick={() => setShowModal(false)} className="text-slate-400 hover:text-white transition-colors">
+                                    <Icons.Close />
+                                </button>
+                            </div>
+                            <div className="space-y-4">
+                                <div>
+                                    <label className="block text-slate-400 text-sm mb-2">Name</label>
+                                    <input
+                                        type="text"
+                                        value={newContact.name}
+                                        onChange={(e) => setNewContact({...newContact, name: e.target.value})}
+                                        className="w-full px-4 py-3 bg-white/5 border border-white/10 rounded-lg text-white focus:outline-none focus:border-teal-400/50"
+                                        placeholder="Full name"
+                                    />
+                                </div>
+                                <div>
+                                    <label className="block text-slate-400 text-sm mb-2">Email</label>
+                                    <input
+                                        type="email"
+                                        value={newContact.email}
+                                        onChange={(e) => setNewContact({...newContact, email: e.target.value})}
+                                        className="w-full px-4 py-3 bg-white/5 border border-white/10 rounded-lg text-white focus:outline-none focus:border-teal-400/50"
+                                        placeholder="email@company.com"
+                                    />
+                                </div>
+                                <div>
+                                    <label className="block text-slate-400 text-sm mb-2">Company</label>
+                                    <input
+                                        type="text"
+                                        value={newContact.company}
+                                        onChange={(e) => setNewContact({...newContact, company: e.target.value})}
+                                        className="w-full px-4 py-3 bg-white/5 border border-white/10 rounded-lg text-white focus:outline-none focus:border-teal-400/50"
+                                        placeholder="Company name"
+                                    />
+                                </div>
+                                <div>
+                                    <label className="block text-slate-400 text-sm mb-2">Status</label>
+                                    <select
+                                        value={newContact.status}
+                                        onChange={(e) => setNewContact({...newContact, status: e.target.value})}
+                                        className="w-full px-4 py-3 bg-white/5 border border-white/10 rounded-lg text-white focus:outline-none focus:border-teal-400/50"
+                                    >
+                                        <option value="lead">Lead</option>
+                                        <option value="prospect">Prospect</option>
+                                        <option value="active">Active</option>
+                                    </select>
+                                </div>
+                                <button
+                                    onClick={handleAddContact}
+                                    className="w-full py-3 bg-gradient-to-r from-teal-500 to-teal-600 text-white rounded-lg font-medium hover:from-teal-400 hover:to-teal-500 transition-all duration-300"
+                                >
+                                    Add Contact
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                )}
+            </div>
+        );
+    };
+
+    // Deals Page
+    const DealsPage = ({ deals, setDeals }) => {
+        const stages = [
+            { id: 'lead', label: 'Lead', color: 'border-slate-400' },
+            { id: 'qualified', label: 'Qualified', color: 'border-amber-400' },
+            { id: 'proposal', label: 'Proposal', color: 'border-coral-400' },
+            { id: 'negotiation', label: 'Negotiation', color: 'border-teal-400' },
+            { id: 'closed', label: 'Closed', color: 'border-emerald-400' },
+        ];
+
+        const [selectedDeal, setSelectedDeal] = useState(null);
+        const [draggedDeal, setDraggedDeal] = useState(null);
+
+        const handleDragStart = (e, deal) => {
+            setDraggedDeal(deal);
+            e.dataTransfer.effectAllowed = 'move';
+        };
+
+        const handleDragOver = (e) => {
+            e.preventDefault();
+            e.dataTransfer.dropEffect = 'move';
+        };
+
+        const handleDrop = (e, stageId) => {
+            e.preventDefault();
+            if (draggedDeal && draggedDeal.stage !== stageId) {
+                setDeals(deals.map(d =>
+                    d.id === draggedDeal.id ? { ...d, stage: stageId } : d
+                ));
+            }
+            setDraggedDeal(null);
+        };
+
+        const getDealsByStage = (stageId) => deals.filter(d => d.stage === stageId);
+        const getTotalByStage = (stageId) => getDealsByStage(stageId).reduce((sum, d) => sum + d.value, 0);
+
+        return (
+            <div className="space-y-6">
+                <div className="flex items-center justify-between">
+                    <div>
+                        <h2 className="font-display text-3xl font-bold text-white">Deals Pipeline</h2>
+                        <p className="text-slate-400 mt-1">Track and manage your sales pipeline</p>
+                    </div>
+                    <div className="flex items-center gap-4">
+                        <div className="text-right">
+                            <p className="text-slate-400 text-sm">Total Pipeline Value</p>
+                            <p className="text-2xl font-bold text-teal-400">
+                                ${deals.reduce((sum, d) => sum + d.value, 0).toLocaleString()}
+                            </p>
+                        </div>
+                    </div>
+                </div>
+
+                {/* Pipeline Board */}
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4 overflow-x-auto pb-4">
+                    {stages.map((stage, stageIndex) => (
+                        <div
+                            key={stage.id}
+                            className={`glass-card rounded-xl p-4 min-h-[400px] ${draggedDeal ? 'cursor-pointer' : ''}`}
+                            onDragOver={handleDragOver}
+                            onDrop={(e) => handleDrop(e, stage.id)}
+                        >
+                            <div className={`border-t-4 ${stage.color} pt-3 mb-4`}>
+                                <div className="flex items-center justify-between">
+                                    <h3 className="font-semibold text-white">{stage.label}</h3>
+                                    <span className="text-slate-400 text-sm">{getDealsByStage(stage.id).length}</span>
+                                </div>
+                                <p className="text-teal-400 text-sm font-medium mt-1">
+                                    ${(getTotalByStage(stage.id) / 1000).toFixed(0)}K
+                                </p>
+                            </div>
+
+                            <div className="space-y-3">
+                                {getDealsByStage(stage.id).map((deal, index) => (
+                                    <div
+                                        key={deal.id}
+                                        draggable
+                                        onDragStart={(e) => handleDragStart(e, deal)}
+                                        onClick={() => setSelectedDeal(deal)}
+                                        className="deal-card bg-white/5 rounded-lg p-4 cursor-pointer hover:bg-white/10 border border-transparent hover:border-teal-400/30"
+                                        style={{ animationDelay: `${(stageIndex * 0.1) + (index * 0.05)}s` }}
+                                    >
+                                        <h4 className="text-white font-medium text-sm">{deal.title}</h4>
+                                        <p className="text-slate-400 text-xs mt-1">{deal.company}</p>
+                                        <div className="mt-3 flex items-center justify-between">
+                                            <span className="text-teal-400 font-semibold">${(deal.value / 1000).toFixed(0)}K</span>
+                                            <span className="text-slate-500 text-xs">{deal.probability}%</span>
+                                        </div>
+                                        <div className="mt-2 h-1 bg-white/10 rounded-full overflow-hidden">
+                                            <div
+                                                className="h-full bg-gradient-to-r from-teal-400 to-teal-600 rounded-full transition-all duration-500"
+                                                style={{ width: `${deal.probability}%` }}
+                                            />
+                                        </div>
+                                    </div>
+                                ))}
+                            </div>
+                        </div>
+                    ))}
+                </div>
+
+                {/* Deal Detail Modal */}
+                {selectedDeal && (
+                    <div className="fixed inset-0 bg-black/50 modal-backdrop flex items-center justify-center z-50 p-4" onClick={(e) => e.target === e.currentTarget && setSelectedDeal(null)}>
+                        <div className="glass-card rounded-2xl p-6 w-full max-w-lg animate-slide-up">
+                            <div className="flex items-start justify-between mb-6">
+                                <div>
+                                    <h3 className="font-display text-xl font-bold text-white">{selectedDeal.title}</h3>
+                                    <p className="text-slate-400 mt-1">{selectedDeal.company}</p>
+                                </div>
+                                <button onClick={() => setSelectedDeal(null)} className="text-slate-400 hover:text-white transition-colors">
+                                    <Icons.Close />
+                                </button>
+                            </div>
+                            <div className="space-y-4">
+                                <div className="grid grid-cols-2 gap-4">
+                                    <div className="bg-white/5 rounded-lg p-4">
+                                        <p className="text-slate-400 text-sm">Deal Value</p>
+                                        <p className="text-2xl font-bold text-teal-400">${selectedDeal.value.toLocaleString()}</p>
+                                    </div>
+                                    <div className="bg-white/5 rounded-lg p-4">
+                                        <p className="text-slate-400 text-sm">Probability</p>
+                                        <p className="text-2xl font-bold text-white">{selectedDeal.probability}%</p>
+                                    </div>
+                                </div>
+                                <div className="bg-white/5 rounded-lg p-4">
+                                    <p className="text-slate-400 text-sm mb-2">Contact</p>
+                                    <p className="text-white font-medium">{selectedDeal.contact}</p>
+                                </div>
+                                <div className="bg-white/5 rounded-lg p-4">
+                                    <p className="text-slate-400 text-sm mb-2">Stage</p>
+                                    <p className="text-white font-medium capitalize">{selectedDeal.stage}</p>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                )}
+            </div>
+        );
+    };
+
+    // Activity Page
+    const ActivityPage = () => {
+        const [filter, setFilter] = useState('all');
+
+        const allActivities = [
+            ...activities,
+            { id: 6, type: 'email', message: 'Follow-up sent to David Park', time: '2 days ago', icon: 'mail' },
+            { id: 7, type: 'deal', message: 'New deal created with Retail Giant Inc', time: '3 days ago', icon: 'check' },
+            { id: 8, type: 'meeting', message: 'Demo scheduled with Innovate Labs', time: '4 days ago', icon: 'users' },
+        ];
+
+        const filteredActivities = filter === 'all' ? allActivities : allActivities.filter(a => a.type === filter);
+
+        const typeColors = {
+            deal: 'bg-emerald-400/20 text-emerald-400 border-emerald-400/30',
+            email: 'bg-teal-400/20 text-teal-400 border-teal-400/30',
+            call: 'bg-amber-400/20 text-amber-400 border-amber-400/30',
+            note: 'bg-coral-400/20 text-coral-400 border-coral-400/30',
+            meeting: 'bg-purple-400/20 text-purple-400 border-purple-400/30',
+        };
+
+        return (
+            <div className="space-y-6">
+                <div className="flex items-center justify-between">
+                    <div>
+                        <h2 className="font-display text-3xl font-bold text-white">Activity Feed</h2>
+                        <p className="text-slate-400 mt-1">Track all your interactions and updates</p>
+                    </div>
+                </div>
+
+                {/* Filter Tabs */}
+                <div className="flex gap-2 flex-wrap">
+                    {['all', 'deal', 'email', 'call', 'meeting', 'note'].map(type => (
+                        <button
+                            key={type}
+                            onClick={() => setFilter(type)}
+                            className={`px-4 py-2 rounded-lg font-medium capitalize transition-all duration-300 ${
+                                filter === type
+                                    ? 'bg-teal-500 text-white'
+                                    : 'bg-white/5 text-slate-400 hover:text-white hover:bg-white/10'
+                            }`}
+                        >
+                            {type === 'all' ? 'All Activity' : type + 's'}
+                        </button>
+                    ))}
+                </div>
+
+                {/* Activity Timeline */}
+                <div className="glass-card rounded-xl p-6">
+                    <div className="space-y-6">
+                        {filteredActivities.map((activity, index) => (
+                            <div
+                                key={activity.id}
+                                className="flex gap-4 animate-slide-up opacity-0"
+                                style={{ animationDelay: `${index * 0.1}s` }}
+                            >
+                                <div className={`w-10 h-10 rounded-xl flex items-center justify-center shrink-0 ${typeColors[activity.type]} border`}>
+                                    {activity.icon === 'check' && <Icons.Check />}
+                                    {activity.icon === 'mail' && <Icons.Mail />}
+                                    {activity.icon === 'phone' && <Icons.Phone />}
+                                    {activity.icon === 'file' && <Icons.File />}
+                                    {activity.icon === 'users' && <Icons.Users />}
+                                </div>
+                                <div className="flex-1 pb-6 border-b border-white/10 last:border-0 last:pb-0">
+                                    <p className="text-white font-medium">{activity.message}</p>
+                                    <p className="text-slate-500 text-sm mt-1">{activity.time}</p>
+                                </div>
+                            </div>
+                        ))}
+                    </div>
+                </div>
+            </div>
+        );
+    };
+
+    // Main App Component
+    const App = () => {
+        const [currentPage, setCurrentPage] = useState('dashboard');
+        const [contacts, setContacts] = useState(initialContacts);
+        const [deals, setDeals] = useState(initialDeals);
+
+        const renderPage = () => {
+            switch (currentPage) {
+                case 'dashboard':
+                    return <DashboardPage contacts={contacts} deals={deals} />;
+                case 'contacts':
+                    return <ContactsPage contacts={contacts} setContacts={setContacts} />;
+                case 'deals':
+                    return <DealsPage deals={deals} setDeals={setDeals} />;
+                case 'activity':
+                    return <ActivityPage />;
+                default:
+                    return <DashboardPage contacts={contacts} deals={deals} />;
+            }
+        };
+
+        return (
+            <div className="min-h-screen bg-navy-900">
+                <ParticleBackground />
+                <Sidebar currentPage={currentPage} setCurrentPage={setCurrentPage} />
+                <main className="ml-64 p-8 relative z-10">
+                    {renderPage()}
+                </main>
+            </div>
+        );
+    };
+
+    // Render
+    const root = ReactDOM.createRoot(document.getElementById('root'));
+    root.render(<App />);
+</script>
+</body>
+</html>

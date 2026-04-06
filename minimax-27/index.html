@@ -1,0 +1,1547 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Nexus CRM</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
+    <script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
+    <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    fontFamily: {
+                        sans: ['Inter', 'system-ui', 'sans-serif'],
+                    },
+                    colors: {
+                        primary: {
+                            50: '#EEF2FF',
+                            100: '#E0E7FF',
+                            200: '#C7D2FE',
+                            300: '#A5B4FC',
+                            400: '#818CF8',
+                            500: '#6366F1',
+                            600: '#4F46E5',
+                            700: '#4338CA',
+                            800: '#3730A3',
+                            900: '#312E81',
+                        }
+                    }
+                }
+            }
+        }
+    </script>
+    <style>
+        * { box-sizing: border-box; }
+        body { font-family: 'Inter', system-ui, sans-serif; }
+        .animate-fade-in { animation: fadeIn 0.3s ease-out; }
+        .animate-slide-up { animation: slideUp 0.3s ease-out; }
+        .animate-scale-in { animation: scaleIn 0.2s ease-out; }
+        @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
+        @keyframes slideUp { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+        @keyframes scaleIn { from { opacity: 0; transform: scale(0.95); } to { opacity: 1; transform: scale(1); } }
+        .scrollbar-thin::-webkit-scrollbar { width: 6px; }
+        .scrollbar-thin::-webkit-scrollbar-track { background: #f1f5f9; }
+        .scrollbar-thin::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 3px; }
+        .scrollbar-thin::-webkit-scrollbar-thumb:hover { background: #94a3b8; }
+    </style>
+</head>
+<body class="bg-slate-50">
+<div id="root"></div>
+
+<script type="text/babel">
+    const { useState, useEffect, useMemo, useCallback } = React;
+
+    // Utility functions
+    const generateId = () => Math.random().toString(36).substr(2, 9);
+
+    const formatCurrency = (amount) => {
+        return new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD', maximumFractionDigits: 0 }).format(amount);
+    };
+
+    const formatDate = (date) => {
+        return new Date(date).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
+    };
+
+    // Icons
+    const Icons = {
+        Dashboard: () => (
+            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2V6zM14 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2V6zM4 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2v-2zM14 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2v-2z" />
+            </svg>
+        ),
+        Users: () => (
+            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z" />
+            </svg>
+        ),
+        Building: () => (
+            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4" />
+            </svg>
+        ),
+        Currency: () => (
+            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+            </svg>
+        ),
+        Task: () => (
+            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-6 9l2 2 4-4" />
+            </svg>
+        ),
+        Settings: () => (
+            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z" />
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+            </svg>
+        ),
+        Plus: () => (
+            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
+            </svg>
+        ),
+        Search: () => (
+            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+            </svg>
+        ),
+        X: () => (
+            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+            </svg>
+        ),
+        Check: () => (
+            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+            </svg>
+        ),
+        ChevronRight: () => (
+            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+            </svg>
+        ),
+        Calendar: () => (
+            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
+            </svg>
+        ),
+        TrendUp: () => (
+            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 7h8m0 0v8m0-8l-8 8-4-4-6 6" />
+            </svg>
+        ),
+        TrendDown: () => (
+            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 17h8m0 0V9m0 8l-8-8-4 4-6-6" />
+            </svg>
+        ),
+        Mail: () => (
+            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
+            </svg>
+        ),
+        Phone: () => (
+            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 5a2 2 0 012-2h3.28a1 1 0 01.948.684l1.498 4.493a1 1 0 01-.502 1.21l-2.257 1.13a11.042 11.042 0 005.516 5.516l1.13-2.257a1 1 0 011.21-.502l4.493 1.498a1 1 0 01.684.949V19a2 2 0 01-2 2h-1C9.716 21 3 14.284 3 6V5z" />
+            </svg>
+        ),
+        Edit: () => (
+            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+            </svg>
+        ),
+        Trash: () => (
+            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+            </svg>
+        )
+    };
+
+    // Initial mock data
+    const initialContacts = [
+        { id: '1', name: 'Sarah Mitchell', email: 'sarah.mitchell@techcorp.com', phone: '+1 (555) 123-4567', company: 'TechCorp Industries', status: 'customer', createdAt: '2024-01-15' },
+        { id: '2', name: 'James Rodriguez', email: 'j.rodriguez@startupxyz.io', phone: '+1 (555) 234-5678', company: 'StartupXYZ', status: 'lead', createdAt: '2024-02-20' },
+        { id: '3', name: 'Emily Chen', email: 'emily.chen@globalfinance.com', phone: '+1 (555) 345-6789', company: 'Global Finance', status: 'customer', createdAt: '2024-01-08' },
+        { id: '4', name: 'Michael Brown', email: 'm.brown@innovate.co', phone: '+1 (555) 456-7890', company: 'Innovate Co', status: 'lead', createdAt: '2024-03-01' },
+        { id: '5', name: 'Lisa Thompson', email: 'lisa.t@dataflow.net', phone: '+1 (555) 567-8901', company: 'DataFlow Systems', status: 'churned', createdAt: '2023-11-10' },
+    ];
+
+    const initialCompanies = [
+        { id: '1', name: 'TechCorp Industries', industry: 'Technology', website: 'techcorp.com', employees: '500-1000', revenue: '50M-100M' },
+        { id: '2', name: 'StartupXYZ', industry: 'SaaS', website: 'startupxyz.io', employees: '50-100', revenue: '5M-10M' },
+        { id: '3', name: 'Global Finance', industry: 'Financial Services', website: 'globalfinance.com', employees: '1000+', revenue: '100M+' },
+        { id: '4', name: 'Innovate Co', industry: 'Consulting', website: 'innovate.co', employees: '100-500', revenue: '10M-50M' },
+        { id: '5', name: 'DataFlow Systems', industry: 'Data Analytics', website: 'dataflow.net', employees: '50-100', revenue: '5M-10M' },
+    ];
+
+    const initialDeals = [
+        { id: '1', title: 'Enterprise License', value: 45000, contact: 'Sarah Mitchell', company: 'TechCorp Industries', stage: 'won', probability: 100, expectedClose: '2024-03-15' },
+        { id: '2', title: 'Annual Subscription', value: 15000, contact: 'James Rodriguez', company: 'StartupXYZ', stage: 'negotiation', probability: 75, expectedClose: '2024-04-01' },
+        { id: '3', title: 'Pro Plan Upgrade', value: 8500, contact: 'Emily Chen', company: 'Global Finance', stage: 'proposal', probability: 50, expectedClose: '2024-04-15' },
+        { id: '4', title: 'Starter Package', value: 5000, contact: 'Michael Brown', company: 'Innovate Co', stage: 'qualified', probability: 25, expectedClose: '2024-05-01' },
+        { id: '5', title: 'Consulting Services', value: 25000, contact: 'Lisa Thompson', company: 'DataFlow Systems', stage: 'lost', probability: 0, expectedClose: '2024-02-28' },
+    ];
+
+    const initialTasks = [
+        { id: '1', title: 'Follow up with Sarah about renewal', dueDate: '2024-04-10', priority: 'high', completed: false, relatedTo: 'Sarah Mitchell' },
+        { id: '2', title: 'Send proposal to James', dueDate: '2024-04-08', priority: 'high', completed: false, relatedTo: 'James Rodriguez' },
+        { id: '3', title: 'Schedule demo for TechCorp team', dueDate: '2024-04-12', priority: 'medium', completed: false, relatedTo: 'Sarah Mitchell' },
+        { id: '4', title: 'Review contract terms', dueDate: '2024-04-05', priority: 'high', completed: true, relatedTo: 'Emily Chen' },
+        { id: '5', title: 'Update CRM contact info', dueDate: '2024-04-15', priority: 'low', completed: false, relatedTo: 'General' },
+    ];
+
+    // Deal stages configuration
+    const dealStages = [
+        { id: 'lead', name: 'Lead', color: 'bg-slate-400' },
+        { id: 'qualified', name: 'Qualified', color: 'bg-blue-500' },
+        { id: 'proposal', name: 'Proposal', color: 'bg-purple-500' },
+        { id: 'negotiation', name: 'Negotiation', color: 'bg-amber-500' },
+        { id: 'won', name: 'Won', color: 'bg-emerald-500' },
+        { id: 'lost', name: 'Lost', color: 'bg-red-500' },
+    ];
+
+    // Modal Component
+    const Modal = ({ isOpen, onClose, title, children }) => {
+        if (!isOpen) return null;
+        return (
+            <div className="fixed inset-0 z-50 overflow-y-auto">
+                <div className="flex min-h-screen items-center justify-center p-4">
+                    <div className="fixed inset-0 bg-black/50 transition-opacity" onClick={onClose}></div>
+                    <div className="relative w-full max-w-lg bg-white rounded-xl shadow-2xl animate-scale-in">
+                        <div className="flex items-center justify-between px-6 py-4 border-b border-slate-200">
+                            <h3 className="text-lg font-semibold text-slate-900">{title}</h3>
+                            <button onClick={onClose} className="p-1 rounded-lg hover:bg-slate-100 transition-colors">
+                                <Icons.X />
+                            </button>
+                        </div>
+                        <div className="p-6">{children}</div>
+                    </div>
+                </div>
+            </div>
+        );
+    };
+
+    // Toast Component
+    const Toast = ({ message, type, onClose }) => {
+        useEffect(() => {
+            const timer = setTimeout(onClose, 3000);
+            return () => clearTimeout(timer);
+        }, [onClose]);
+
+        const bgColor = type === 'success' ? 'bg-emerald-500' : type === 'error' ? 'bg-red-500' : 'bg-slate-700';
+
+        return (
+            <div className={`fixed bottom-4 right-4 ${bgColor} text-white px-6 py-3 rounded-lg shadow-lg animate-slide-up flex items-center gap-3 z-50`}>
+                {type === 'success' && <Icons.Check />}
+                <span>{message}</span>
+            </div>
+        );
+    };
+
+    // Form Input Component
+    const FormInput = ({ label, ...props }) => (
+        <div>
+            <label className="block text-sm font-medium text-slate-700 mb-1.5">{label}</label>
+            <input {...props} className="w-full px-4 py-2.5 border border-slate-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500 outline-none transition-all" />
+        </div>
+    );
+
+    // Form Select Component
+    const FormSelect = ({ label, options, ...props }) => (
+        <div>
+            <label className="block text-sm font-medium text-slate-700 mb-1.5">{label}</label>
+            <select {...props} className="w-full px-4 py-2.5 border border-slate-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500 outline-none transition-all bg-white">
+                {options.map(opt => <option key={opt.value} value={opt.value}>{opt.label}</option>)}
+            </select>
+        </div>
+    );
+
+    // Status Badge Component
+    const StatusBadge = ({ status }) => {
+        const styles = {
+            lead: 'bg-amber-100 text-amber-700',
+            customer: 'bg-emerald-100 text-emerald-700',
+            churned: 'bg-slate-100 text-slate-600',
+        };
+        return <span className={`px-2.5 py-1 text-xs font-medium rounded-full ${styles[status]}`}>{status.charAt(0).toUpperCase() + status.slice(1)}</span>;
+    };
+
+    // Priority Badge Component
+    const PriorityBadge = ({ priority }) => {
+        const styles = {
+            high: 'bg-red-100 text-red-700',
+            medium: 'bg-amber-100 text-amber-700',
+            low: 'bg-slate-100 text-slate-600',
+        };
+        return <span className={`px-2 py-0.5 text-xs font-medium rounded ${styles[priority]}`}>{priority}</span>;
+    };
+
+    // Metric Card Component
+    const MetricCard = ({ icon: Icon, label, value, trend, trendValue }) => (
+        <div className="bg-white rounded-xl p-6 shadow-sm border border-slate-100 hover:shadow-md transition-shadow">
+            <div className="flex items-start justify-between">
+                <div className="p-2 bg-primary-50 rounded-lg text-primary-600">
+                    <Icon />
+                </div>
+                {trend && (
+                    <span className={`flex items-center text-sm font-medium ${trend === 'up' ? 'text-emerald-600' : 'text-red-600'}`}>
+              {trend === 'up' ? <Icons.TrendUp /> : <Icons.TrendDown />}
+                        {trendValue}
+            </span>
+                )}
+            </div>
+            <p className="mt-4 text-3xl font-bold text-slate-900">{value}</p>
+            <p className="text-sm text-slate-500 mt-1">{label}</p>
+        </div>
+    );
+
+    // Contact Form Modal
+    const ContactForm = ({ contact, onSave, onClose }) => {
+        const [formData, setFormData] = useState(contact || { name: '', email: '', phone: '', company: '', status: 'lead' });
+
+        const handleSubmit = (e) => {
+            e.preventDefault();
+            onSave({ ...formData, id: contact?.id || generateId(), createdAt: contact?.createdAt || new Date().toISOString().split('T')[0] });
+        };
+
+        return (
+            <form onSubmit={handleSubmit} className="space-y-4">
+                <FormInput label="Name" required value={formData.name} onChange={e => setFormData({...formData, name: e.target.value})} placeholder="John Smith" />
+                <FormInput label="Email" type="email" required value={formData.email} onChange={e => setFormData({...formData, email: e.target.value})} placeholder="john@company.com" />
+                <FormInput label="Phone" value={formData.phone} onChange={e => setFormData({...formData, phone: e.target.value})} placeholder="+1 (555) 000-0000" />
+                <FormInput label="Company" value={formData.company} onChange={e => setFormData({...formData, company: e.target.value})} placeholder="Company Name" />
+                <FormSelect label="Status" value={formData.status} onChange={e => setFormData({...formData, status: e.target.value})}
+                            options={[{value: 'lead', label: 'Lead'}, {value: 'customer', label: 'Customer'}, {value: 'churned', label: 'Churned'}]} />
+                <div className="flex gap-3 pt-4">
+                    <button type="button" onClick={onClose} className="flex-1 px-4 py-2.5 border border-slate-300 rounded-lg font-medium text-slate-700 hover:bg-slate-50 transition-colors">Cancel</button>
+                    <button type="submit" className="flex-1 px-4 py-2.5 bg-primary-600 text-white rounded-lg font-medium hover:bg-primary-700 transition-colors">Save Contact</button>
+                </div>
+            </form>
+        );
+    };
+
+    // Company Form Modal
+    const CompanyForm = ({ company, onSave, onClose }) => {
+        const [formData, setFormData] = useState(company || { name: '', industry: '', website: '', employees: '', revenue: '' });
+
+        const handleSubmit = (e) => {
+            e.preventDefault();
+            onSave({ ...formData, id: company?.id || generateId() });
+        };
+
+        return (
+            <form onSubmit={handleSubmit} className="space-y-4">
+                <FormInput label="Company Name" required value={formData.name} onChange={e => setFormData({...formData, name: e.target.value})} placeholder="Acme Inc" />
+                <FormSelect label="Industry" value={formData.industry} onChange={e => setFormData({...formData, industry: e.target.value})}
+                            options={[{value: 'Technology', label: 'Technology'}, {value: 'SaaS', label: 'SaaS'}, {value: 'Financial Services', label: 'Financial Services'}, {value: 'Healthcare', label: 'Healthcare'}, {value: 'Consulting', label: 'Consulting'}, {value: 'Retail', label: 'Retail'}]} />
+                <FormInput label="Website" value={formData.website} onChange={e => setFormData({...formData, website: e.target.value})} placeholder="acme.com" />
+                <FormSelect label="Employees" value={formData.employees} onChange={e => setFormData({...formData, employees: e.target.value})}
+                            options={[{value: '1-10', label: '1-10'}, {value: '10-50', label: '10-50'}, {value: '50-100', label: '50-100'}, {value: '100-500', label: '100-500'}, {value: '500-1000', label: '500-1000'}, {value: '1000+', label: '1000+'}]} />
+                <FormSelect label="Annual Revenue" value={formData.revenue} onChange={e => setFormData({...formData, revenue: e.target.value})}
+                            options={[{value: '<1M', label: 'Under $1M'}, {value: '1M-5M', label: '$1M - $5M'}, {value: '5M-10M', label: '$5M - $10M'}, {value: '10M-50M', label: '$10M - $50M'}, {value: '50M-100M', label: '$50M - $100M'}, {value: '100M+', label: '$100M+'}]} />
+                <div className="flex gap-3 pt-4">
+                    <button type="button" onClick={onClose} className="flex-1 px-4 py-2.5 border border-slate-300 rounded-lg font-medium text-slate-700 hover:bg-slate-50 transition-colors">Cancel</button>
+                    <button type="submit" className="flex-1 px-4 py-2.5 bg-primary-600 text-white rounded-lg font-medium hover:bg-primary-700 transition-colors">Save Company</button>
+                </div>
+            </form>
+        );
+    };
+
+    // Deal Form Modal
+    const DealForm = ({ deal, contacts, onSave, onClose }) => {
+        const [formData, setFormData] = useState(deal || { title: '', value: '', contact: '', company: '', stage: 'lead', probability: 10, expectedClose: '' });
+
+        const handleSubmit = (e) => {
+            e.preventDefault();
+            onSave({ ...formData, id: deal?.id || generateId() });
+        };
+
+        return (
+            <form onSubmit={handleSubmit} className="space-y-4">
+                <FormInput label="Deal Title" required value={formData.title} onChange={e => setFormData({...formData, title: e.target.value})} placeholder="Enterprise License" />
+                <FormInput label="Value ($)" type="number" required value={formData.value} onChange={e => setFormData({...formData, value: parseInt(e.target.value)})} placeholder="50000" />
+                <FormSelect label="Contact" value={formData.contact} onChange={e => setFormData({...formData, contact: e.target.value})}
+                            options={contacts.map(c => ({value: c.name, label: c.name}))} />
+                <FormInput label="Company" value={formData.company} onChange={e => setFormData({...formData, company: e.target.value})} placeholder="Company Name" />
+                <FormSelect label="Stage" value={formData.stage} onChange={e => setFormData({...formData, stage: e.target.value})}
+                            options={dealStages.map(s => ({value: s.id, label: s.name}))} />
+                <FormInput label="Probability (%)" type="number" value={formData.probability} onChange={e => setFormData({...formData, probability: parseInt(e.target.value)})} />
+                <FormInput label="Expected Close Date" type="date" value={formData.expectedClose} onChange={e => setFormData({...formData, expectedClose: e.target.value})} />
+                <div className="flex gap-3 pt-4">
+                    <button type="button" onClick={onClose} className="flex-1 px-4 py-2.5 border border-slate-300 rounded-lg font-medium text-slate-700 hover:bg-slate-50 transition-colors">Cancel</button>
+                    <button type="submit" className="flex-1 px-4 py-2.5 bg-primary-600 text-white rounded-lg font-medium hover:bg-primary-700 transition-colors">Save Deal</button>
+                </div>
+            </form>
+        );
+    };
+
+    // Task Form Modal
+    const TaskForm = ({ task, contacts, onSave, onClose }) => {
+        const [formData, setFormData] = useState(task || { title: '', dueDate: '', priority: 'medium', completed: false, relatedTo: '' });
+
+        const handleSubmit = (e) => {
+            e.preventDefault();
+            onSave({ ...formData, id: task?.id || generateId() });
+        };
+
+        return (
+            <form onSubmit={handleSubmit} className="space-y-4">
+                <FormInput label="Task Title" required value={formData.title} onChange={e => setFormData({...formData, title: e.target.value})} placeholder="Follow up with client" />
+                <FormInput label="Due Date" type="date" value={formData.dueDate} onChange={e => setFormData({...formData, dueDate: e.target.value})} />
+                <FormSelect label="Priority" value={formData.priority} onChange={e => setFormData({...formData, priority: e.target.value})}
+                            options={[{value: 'low', label: 'Low'}, {value: 'medium', label: 'Medium'}, {value: 'high', label: 'High'}]} />
+                <FormSelect label="Related To" value={formData.relatedTo} onChange={e => setFormData({...formData, relatedTo: e.target.value})}
+                            options={[{value: '', label: 'None'}, ...contacts.map(c => ({value: c.name, label: c.name})), {value: 'General', label: 'General'}]} />
+                <div className="flex gap-3 pt-4">
+                    <button type="button" onClick={onClose} className="flex-1 px-4 py-2.5 border border-slate-300 rounded-lg font-medium text-slate-700 hover:bg-slate-50 transition-colors">Cancel</button>
+                    <button type="submit" className="flex-1 px-4 py-2.5 bg-primary-600 text-white rounded-lg font-medium hover:bg-primary-700 transition-colors">Save Task</button>
+                </div>
+            </form>
+        );
+    };
+
+    // Dashboard Component
+    const Dashboard = ({ contacts, deals, tasks }) => {
+        const totalRevenue = deals.filter(d => d.stage === 'won').reduce((sum, d) => sum + d.value, 0);
+        const activeDeals = deals.filter(d => !['won', 'lost'].includes(d.stage)).length;
+        const tasksDue = tasks.filter(t => !t.completed && new Date(t.dueDate) <= new Date()).length;
+        const wonDeals = deals.filter(d => d.stage === 'won').length;
+
+        const pipelineValue = dealStages.filter(s => !['won', 'lost'].includes(s.id)).reduce((acc, stage) => {
+            const stageDeals = deals.filter(d => d.stage === stage.id);
+            return { ...acc, [stage.id]: stageDeals.reduce((sum, d) => sum + d.value, 0) };
+        }, {});
+
+        return (
+            <div className="space-y-6 animate-fade-in">
+                <div>
+                    <h1 className="text-2xl font-bold text-slate-900">Dashboard</h1>
+                    <p className="text-slate-500 mt-1">Welcome back! Here's what's happening with your CRM.</p>
+                </div>
+
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+                    <MetricCard icon={Icons.Users} label="Total Contacts" value={contacts.length} trend="up" trendValue="12%" />
+                    <MetricCard icon={Icons.Currency} label="Revenue (Won)" value={formatCurrency(totalRevenue)} trend="up" trendValue="8%" />
+                    <MetricCard icon={Icons.Task} label="Tasks Due" value={tasksDue} trend="down" trendValue="3%" />
+                    <MetricCard icon={Icons.Dashboard} label="Active Deals" value={activeDeals} />
+                </div>
+
+                <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                    {/* Pipeline Overview */}
+                    <div className="bg-white rounded-xl p-6 shadow-sm border border-slate-100">
+                        <h2 className="text-lg font-semibold text-slate-900 mb-4">Pipeline Overview</h2>
+                        <div className="space-y-4">
+                            {dealStages.filter(s => !['won', 'lost'].includes(s.id)).map(stage => (
+                                <div key={stage.id} className="flex items-center gap-4">
+                                    <div className={`w-3 h-3 rounded-full ${stage.color}`}></div>
+                                    <span className="w-24 text-sm text-slate-600">{stage.name}</span>
+                                    <div className="flex-1 bg-slate-100 rounded-full h-2">
+                                        <div
+                                            className={`h-2 rounded-full ${stage.color}`}
+                                            style={{ width: `${Math.min((pipelineValue[stage.id] || 0) / 50000 * 100, 100)}%` }}
+                                        ></div>
+                                    </div>
+                                    <span className="text-sm font-medium text-slate-900">{formatCurrency(pipelineValue[stage.id] || 0)}</span>
+                                </div>
+                            ))}
+                        </div>
+                    </div>
+
+                    {/* Recent Activity */}
+                    <div className="bg-white rounded-xl p-6 shadow-sm border border-slate-100">
+                        <h2 className="text-lg font-semibold text-slate-900 mb-4">Recent Tasks</h2>
+                        <div className="space-y-3">
+                            {tasks.slice(0, 5).map(task => (
+                                <div key={task.id} className="flex items-center gap-3 p-3 bg-slate-50 rounded-lg">
+                                    <div className={`w-2 h-2 rounded-full ${task.priority === 'high' ? 'bg-red-500' : task.priority === 'medium' ? 'bg-amber-500' : 'bg-slate-400'}`}></div>
+                                    <div className="flex-1 min-w-0">
+                                        <p className={`text-sm font-medium truncate ${task.completed ? 'text-slate-400 line-through' : 'text-slate-900'}`}>{task.title}</p>
+                                        <p className="text-xs text-slate-500">{task.relatedTo}</p>
+                                    </div>
+                                    <span className="text-xs text-slate-500">{formatDate(task.dueDate)}</span>
+                                </div>
+                            ))}
+                        </div>
+                    </div>
+                </div>
+
+                {/* Top Deals */}
+                <div className="bg-white rounded-xl p-6 shadow-sm border border-slate-100">
+                    <h2 className="text-lg font-semibold text-slate-900 mb-4">Top Deals</h2>
+                    <div className="overflow-x-auto">
+                        <table className="w-full">
+                            <thead>
+                            <tr className="border-b border-slate-200">
+                                <th className="text-left py-3 px-4 text-xs font-semibold text-slate-500 uppercase tracking-wider">Deal</th>
+                                <th className="text-left py-3 px-4 text-xs font-semibold text-slate-500 uppercase tracking-wider">Contact</th>
+                                <th className="text-left py-3 px-4 text-xs font-semibold text-slate-500 uppercase tracking-wider">Stage</th>
+                                <th className="text-right py-3 px-4 text-xs font-semibold text-slate-500 uppercase tracking-wider">Value</th>
+                            </tr>
+                            </thead>
+                            <tbody>
+                            {deals.filter(d => !['won', 'lost'].includes(d.stage)).slice(0, 5).map(deal => (
+                                <tr key={deal.id} className="border-b border-slate-100 hover:bg-slate-50 transition-colors">
+                                    <td className="py-4 px-4">
+                                        <span className="font-medium text-slate-900">{deal.title}</span>
+                                    </td>
+                                    <td className="py-4 px-4 text-slate-600">{deal.contact}</td>
+                                    <td className="py-4 px-4">
+                        <span className={`px-2.5 py-1 text-xs font-medium rounded-full ${dealStages.find(s => s.id === deal.stage)?.color.replace('bg-', 'bg-opacity-20 text-').replace('-500', '-700') || 'bg-slate-100 text-slate-600'}`}>
+                          {dealStages.find(s => s.id === deal.stage)?.name}
+                        </span>
+                                    </td>
+                                    <td className="py-4 px-4 text-right font-semibold text-slate-900">{formatCurrency(deal.value)}</td>
+                                </tr>
+                            ))}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        );
+    };
+
+    // Contacts View
+    const ContactsView = ({ contacts, onSave, onDelete }) => {
+        const [search, setSearch] = useState('');
+        const [statusFilter, setStatusFilter] = useState('all');
+        const [modalOpen, setModalOpen] = useState(false);
+        const [editingContact, setEditingContact] = useState(null);
+
+        const filteredContacts = contacts.filter(c => {
+            const matchesSearch = c.name.toLowerCase().includes(search.toLowerCase()) || c.email.toLowerCase().includes(search.toLowerCase()) || c.company.toLowerCase().includes(search.toLowerCase());
+            const matchesStatus = statusFilter === 'all' || c.status === statusFilter;
+            return matchesSearch && matchesStatus;
+        });
+
+        const handleSave = (contact) => {
+            onSave(contact);
+            setModalOpen(false);
+            setEditingContact(null);
+        };
+
+        const handleEdit = (contact) => {
+            setEditingContact(contact);
+            setModalOpen(true);
+        };
+
+        const handleAdd = () => {
+            setEditingContact(null);
+            setModalOpen(true);
+        };
+
+        return (
+            <div className="space-y-6 animate-fade-in">
+                <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+                    <div>
+                        <h1 className="text-2xl font-bold text-slate-900">Contacts</h1>
+                        <p className="text-slate-500 mt-1">{contacts.length} total contacts</p>
+                    </div>
+                    <button onClick={handleAdd} className="flex items-center gap-2 px-4 py-2.5 bg-primary-600 text-white rounded-lg font-medium hover:bg-primary-700 transition-colors">
+                        <Icons.Plus /> Add Contact
+                    </button>
+                </div>
+
+                <div className="flex flex-col sm:flex-row gap-4">
+                    <div className="relative flex-1">
+                        <Icons.Search />
+                        <input type="text" placeholder="Search contacts..." value={search} onChange={e => setSearch(e.target.value)}
+                               className="w-full pl-10 pr-4 py-2.5 border border-slate-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500 outline-none" />
+                        <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-slate-400"><Icons.Search /></div>
+                    </div>
+                    <select value={statusFilter} onChange={e => setStatusFilter(e.target.value)}
+                            className="px-4 py-2.5 border border-slate-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500 outline-none bg-white">
+                        <option value="all">All Status</option>
+                        <option value="lead">Lead</option>
+                        <option value="customer">Customer</option>
+                        <option value="churned">Churned</option>
+                    </select>
+                </div>
+
+                <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
+                    {filteredContacts.map(contact => (
+                        <div key={contact.id} className="bg-white rounded-xl p-5 shadow-sm border border-slate-100 hover:shadow-md transition-all hover:border-primary-200">
+                            <div className="flex items-start justify-between">
+                                <div className="flex items-center gap-3">
+                                    <div className="w-12 h-12 bg-gradient-to-br from-primary-500 to-primary-600 rounded-full flex items-center justify-center text-white font-semibold text-lg">
+                                        {contact.name.split(' ').map(n => n[0]).join('')}
+                                    </div>
+                                    <div>
+                                        <h3 className="font-semibold text-slate-900">{contact.name}</h3>
+                                        <p className="text-sm text-slate-500">{contact.company}</p>
+                                    </div>
+                                </div>
+                                <StatusBadge status={contact.status} />
+                            </div>
+                            <div className="mt-4 space-y-2">
+                                <div className="flex items-center gap-2 text-sm text-slate-600">
+                                    <Icons.Mail /> {contact.email}
+                                </div>
+                                <div className="flex items-center gap-2 text-sm text-slate-600">
+                                    <Icons.Phone /> {contact.phone}
+                                </div>
+                            </div>
+                            <div className="mt-4 pt-4 border-t border-slate-100 flex justify-between">
+                                <span className="text-xs text-slate-500">Added {formatDate(contact.createdAt)}</span>
+                                <div className="flex gap-2">
+                                    <button onClick={() => handleEdit(contact)} className="p-2 hover:bg-slate-100 rounded-lg transition-colors text-slate-500 hover:text-primary-600">
+                                        <Icons.Edit />
+                                    </button>
+                                    <button onClick={() => onDelete(contact.id)} className="p-2 hover:bg-slate-100 rounded-lg transition-colors text-slate-500 hover:text-red-600">
+                                        <Icons.Trash />
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                    ))}
+                </div>
+
+                {filteredContacts.length === 0 && (
+                    <div className="text-center py-12 bg-white rounded-xl shadow-sm">
+                        <p className="text-slate-500">No contacts found matching your criteria.</p>
+                    </div>
+                )}
+
+                <Modal isOpen={modalOpen} onClose={() => { setModalOpen(false); setEditingContact(null); }} title={editingContact ? 'Edit Contact' : 'Add Contact'}>
+                    <ContactForm contact={editingContact} onSave={handleSave} onClose={() => { setModalOpen(false); setEditingContact(null); }} />
+                </Modal>
+            </div>
+        );
+    };
+
+    // Companies View
+    const CompaniesView = ({ companies, onSave, onDelete }) => {
+        const [search, setSearch] = useState('');
+        const [modalOpen, setModalOpen] = useState(false);
+        const [editingCompany, setEditingCompany] = useState(null);
+
+        const filteredCompanies = companies.filter(c =>
+            c.name.toLowerCase().includes(search.toLowerCase()) || c.industry.toLowerCase().includes(search.toLowerCase())
+        );
+
+        const handleSave = (company) => {
+            onSave(company);
+            setModalOpen(false);
+            setEditingCompany(null);
+        };
+
+        return (
+            <div className="space-y-6 animate-fade-in">
+                <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+                    <div>
+                        <h1 className="text-2xl font-bold text-slate-900">Companies</h1>
+                        <p className="text-slate-500 mt-1">{companies.length} companies</p>
+                    </div>
+                    <button onClick={() => setModalOpen(true)} className="flex items-center gap-2 px-4 py-2.5 bg-primary-600 text-white rounded-lg font-medium hover:bg-primary-700 transition-colors">
+                        <Icons.Plus /> Add Company
+                    </button>
+                </div>
+
+                <div className="relative">
+                    <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-slate-400"><Icons.Search /></div>
+                    <input type="text" placeholder="Search companies..." value={search} onChange={e => setSearch(e.target.value)}
+                           className="w-full pl-10 pr-4 py-2.5 border border-slate-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500 outline-none" />
+                </div>
+
+                <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
+                    {filteredCompanies.map(company => (
+                        <div key={company.id} className="bg-white rounded-xl p-5 shadow-sm border border-slate-100 hover:shadow-md transition-all hover:border-primary-200">
+                            <div className="flex items-start justify-between">
+                                <div className="flex items-center gap-3">
+                                    <div className="w-12 h-12 bg-gradient-to-br from-emerald-500 to-emerald-600 rounded-lg flex items-center justify-center text-white font-bold text-lg">
+                                        {company.name.charAt(0)}
+                                    </div>
+                                    <div>
+                                        <h3 className="font-semibold text-slate-900">{company.name}</h3>
+                                        <p className="text-sm text-slate-500">{company.industry}</p>
+                                    </div>
+                                </div>
+                            </div>
+                            <div className="mt-4 space-y-2 text-sm">
+                                <div className="flex items-center gap-2 text-slate-600">
+                                    <span className="font-medium w-20">Website:</span>
+                                    <span>{company.website}</span>
+                                </div>
+                                <div className="flex items-center gap-2 text-slate-600">
+                                    <span className="font-medium w-20">Employees:</span>
+                                    <span>{company.employees}</span>
+                                </div>
+                                <div className="flex items-center gap-2 text-slate-600">
+                                    <span className="font-medium w-20">Revenue:</span>
+                                    <span>{company.revenue}</span>
+                                </div>
+                            </div>
+                            <div className="mt-4 pt-4 border-t border-slate-100 flex justify-end gap-2">
+                                <button onClick={() => { setEditingCompany(company); setModalOpen(true); }} className="p-2 hover:bg-slate-100 rounded-lg transition-colors text-slate-500 hover:text-primary-600">
+                                    <Icons.Edit />
+                                </button>
+                                <button onClick={() => onDelete(company.id)} className="p-2 hover:bg-slate-100 rounded-lg transition-colors text-slate-500 hover:text-red-600">
+                                    <Icons.Trash />
+                                </button>
+                            </div>
+                        </div>
+                    ))}
+                </div>
+
+                {filteredCompanies.length === 0 && (
+                    <div className="text-center py-12 bg-white rounded-xl shadow-sm">
+                        <p className="text-slate-500">No companies found.</p>
+                    </div>
+                )}
+
+                <Modal isOpen={modalOpen} onClose={() => { setModalOpen(false); setEditingCompany(null); }} title={editingCompany ? 'Edit Company' : 'Add Company'}>
+                    <CompanyForm company={editingCompany} onSave={handleSave} onClose={() => { setModalOpen(false); setEditingCompany(null); }} />
+                </Modal>
+            </div>
+        );
+    };
+
+    // Deals View (Kanban)
+    const DealsView = ({ deals, contacts, onSave, onDelete }) => {
+        const [modalOpen, setModalOpen] = useState(false);
+        const [editingDeal, setEditingDeal] = useState(null);
+
+        const dealsByStage = useMemo(() => {
+            return dealStages.reduce((acc, stage) => {
+                acc[stage.id] = deals.filter(d => d.stage === stage.id);
+                return acc;
+            }, {});
+        }, [deals]);
+
+        const stageTotal = (stageId) => {
+            return dealsByStage[stageId]?.reduce((sum, d) => sum + d.value, 0) || 0;
+        };
+
+        const handleSave = (deal) => {
+            onSave(deal);
+            setModalOpen(false);
+            setEditingDeal(null);
+        };
+
+        return (
+            <div className="space-y-6 animate-fade-in">
+                <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+                    <div>
+                        <h1 className="text-2xl font-bold text-slate-900">Deals Pipeline</h1>
+                        <p className="text-slate-500 mt-1">{deals.length} total deals</p>
+                    </div>
+                    <button onClick={() => setModalOpen(true)} className="flex items-center gap-2 px-4 py-2.5 bg-primary-600 text-white rounded-lg font-medium hover:bg-primary-700 transition-colors">
+                        <Icons.Plus /> Add Deal
+                    </button>
+                </div>
+
+                <div className="flex gap-4 overflow-x-auto pb-4 scrollbar-thin">
+                    {dealStages.map(stage => (
+                        <div key={stage.id} className="flex-shrink-0 w-72">
+                            <div className={`rounded-xl p-3 ${stage.color} bg-opacity-10 mb-3`}>
+                                <div className="flex items-center justify-between">
+                                    <div className="flex items-center gap-2">
+                                        <div className={`w-2 h-2 rounded-full ${stage.color}`}></div>
+                                        <span className="font-semibold text-slate-900">{stage.name}</span>
+                                    </div>
+                                    <span className="text-xs font-medium text-slate-600">{dealsByStage[stage.id]?.length || 0}</span>
+                                </div>
+                                <p className="text-sm text-slate-600 mt-1">{formatCurrency(stageTotal(stage.id))}</p>
+                            </div>
+                            <div className="space-y-3">
+                                {dealsByStage[stage.id]?.map(deal => (
+                                    <div key={deal.id} className="bg-white rounded-xl p-4 shadow-sm border border-slate-100 hover:shadow-md hover:border-primary-200 transition-all cursor-pointer group">
+                                        <div className="flex items-start justify-between">
+                                            <h4 className="font-medium text-slate-900">{deal.title}</h4>
+                                            <div className="flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                                                <button onClick={(e) => { e.stopPropagation(); setEditingDeal(deal); setModalOpen(true); }} className="p-1 hover:bg-slate-100 rounded text-slate-400 hover:text-primary-600">
+                                                    <Icons.Edit />
+                                                </button>
+                                                <button onClick={(e) => { e.stopPropagation(); onDelete(deal.id); }} className="p-1 hover:bg-slate-100 rounded text-slate-400 hover:text-red-600">
+                                                    <Icons.Trash />
+                                                </button>
+                                            </div>
+                                        </div>
+                                        <p className="text-2xl font-bold text-slate-900 mt-2">{formatCurrency(deal.value)}</p>
+                                        <div className="mt-3 flex items-center justify-between text-sm">
+                                            <span className="text-slate-500">{deal.contact}</span>
+                                            <span className="text-slate-500">{deal.probability}%</span>
+                                        </div>
+                                        <div className="mt-2 flex items-center gap-1 text-xs text-slate-500">
+                                            <Icons.Calendar /> {formatDate(deal.expectedClose)}
+                                        </div>
+                                    </div>
+                                ))}
+                            </div>
+                        </div>
+                    ))}
+                </div>
+
+                <Modal isOpen={modalOpen} onClose={() => { setModalOpen(false); setEditingDeal(null); }} title={editingDeal ? 'Edit Deal' : 'Add Deal'}>
+                    <DealForm deal={editingDeal} contacts={contacts} onSave={handleSave} onClose={() => { setModalOpen(false); setEditingDeal(null); }} />
+                </Modal>
+            </div>
+        );
+    };
+
+    // Tasks View
+    const TasksView = ({ tasks, contacts, onSave, onDelete }) => {
+        const [filter, setFilter] = useState('all');
+        const [modalOpen, setModalOpen] = useState(false);
+        const [editingTask, setEditingTask] = useState(null);
+
+        const filteredTasks = tasks.filter(t => {
+            if (filter === 'pending') return !t.completed;
+            if (filter === 'completed') return t.completed;
+            if (filter === 'overdue') return !t.completed && new Date(t.dueDate) < new Date();
+            return true;
+        });
+
+        const handleSave = (task) => {
+            onSave(task);
+            setModalOpen(false);
+            setEditingTask(null);
+        };
+
+        const toggleComplete = (task) => {
+            onSave({ ...task, completed: !task.completed });
+        };
+
+        return (
+            <div className="space-y-6 animate-fade-in">
+                <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+                    <div>
+                        <h1 className="text-2xl font-bold text-slate-900">Tasks</h1>
+                        <p className="text-slate-500 mt-1">{tasks.filter(t => !t.completed).length} pending, {tasks.filter(t => t.completed).length} completed</p>
+                    </div>
+                    <button onClick={() => setModalOpen(true)} className="flex items-center gap-2 px-4 py-2.5 bg-primary-600 text-white rounded-lg font-medium hover:bg-primary-700 transition-colors">
+                        <Icons.Plus /> Add Task
+                    </button>
+                </div>
+
+                <div className="flex gap-2">
+                    {['all', 'pending', 'completed', 'overdue'].map(f => (
+                        <button key={f} onClick={() => setFilter(f)}
+                                className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${filter === f ? 'bg-primary-600 text-white' : 'bg-white text-slate-600 hover:bg-slate-100'}`}>
+                            {f.charAt(0).toUpperCase() + f.slice(1)}
+                        </button>
+                    ))}
+                </div>
+
+                <div className="bg-white rounded-xl shadow-sm border border-slate-100 overflow-hidden">
+                    {filteredTasks.map((task, idx) => (
+                        <div key={task.id} className={`flex items-center gap-4 p-4 hover:bg-slate-50 transition-colors ${idx !== filteredTasks.length - 1 ? 'border-b border-slate-100' : ''}`}>
+                            <button onClick={() => toggleComplete(task)}
+                                    className={`w-6 h-6 rounded-full border-2 flex items-center justify-center transition-colors ${task.completed ? 'bg-emerald-500 border-emerald-500 text-white' : 'border-slate-300 hover:border-primary-500'}`}>
+                                {task.completed && <Icons.Check />}
+                            </button>
+                            <div className="flex-1 min-w-0">
+                                <p className={`font-medium ${task.completed ? 'text-slate-400 line-through' : 'text-slate-900'}`}>{task.title}</p>
+                                <p className="text-sm text-slate-500">{task.relatedTo}</p>
+                            </div>
+                            <PriorityBadge priority={task.priority} />
+                            <div className="flex items-center gap-2 text-sm text-slate-500">
+                                <Icons.Calendar /> {formatDate(task.dueDate)}
+                            </div>
+                            <div className="flex gap-1">
+                                <button onClick={() => { setEditingTask(task); setModalOpen(true); }} className="p-2 hover:bg-slate-100 rounded-lg text-slate-400 hover:text-primary-600 transition-colors">
+                                    <Icons.Edit />
+                                </button>
+                                <button onClick={() => onDelete(task.id)} className="p-2 hover:bg-slate-100 rounded-lg text-slate-400 hover:text-red-600 transition-colors">
+                                    <Icons.Trash />
+                                </button>
+                            </div>
+                        </div>
+                    ))}
+                    {filteredTasks.length === 0 && (
+                        <div className="text-center py-12">
+                            <p className="text-slate-500">No tasks found.</p>
+                        </div>
+                    )}
+                </div>
+
+                <Modal isOpen={modalOpen} onClose={() => { setModalOpen(false); setEditingTask(null); }} title={editingTask ? 'Edit Task' : 'Add Task'}>
+                    <TaskForm task={editingTask} contacts={contacts} onSave={handleSave} onClose={() => { setModalOpen(false); setEditingTask(null); }} />
+                </Modal>
+            </div>
+        );
+    };
+
+    // Settings View
+    const SettingsView = () => (
+        <div className="space-y-6 animate-fade-in">
+            <div>
+                <h1 className="text-2xl font-bold text-slate-900">Settings</h1>
+                <p className="text-slate-500 mt-1">Manage your account preferences</p>
+            </div>
+            <div className="bg-white rounded-xl p-6 shadow-sm border border-slate-100">
+                <div className="space-y-6">
+                    <div>
+                        <h3 className="text-lg font-semibold text-slate-900 mb-4">Profile</h3>
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                            <FormInput label="Full Name" defaultValue="Admin User" />
+                            <FormInput label="Email" type="email" defaultValue="admin@nexus-crm.com" />
+                            <FormInput label="Company" defaultValue="Nexus CRM" />
+                            <FormInput label="Role" defaultValue="Administrator" />
+                        </div>
+                    </div>
+                    <div className="pt-6 border-t border-slate-200">
+                        <h3 className="text-lg font-semibold text-slate-900 mb-4">Notifications</h3>
+                        <div className="space-y-3">
+                            <label className="flex items-center gap-3">
+                                <input type="checkbox" defaultChecked className="w-5 h-5 rounded border-slate-300 text-primary-600 focus:ring-primary-500" />
+                                <span className="text-slate-700">Email notifications for new tasks</span>
+                            </label>
+                            <label className="flex items-center gap-3">
+                                <input type="checkbox" defaultChecked className="w-5 h-5 rounded border-slate-300 text-primary-600 focus:ring-primary-500" />
+                                <span className="text-slate-700">Daily digest emails</span>
+                            </label>
+                            <label className="flex items-center gap-3">
+                                <input type="checkbox" className="w-5 h-5 rounded border-slate-300 text-primary-600 focus:ring-primary-500" />
+                                <span className="text-slate-700">Deal stage change alerts</span>
+                            </label>
+                        </div>
+                    </div>
+                    <div className="pt-6 border-t border-slate-200">
+                        <button className="px-6 py-2.5 bg-primary-600 text-white rounded-lg font-medium hover:bg-primary-700 transition-colors">Save Changes</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    );
+
+    // Sidebar Component
+    const Sidebar = ({ activeView, setActiveView, collapsed }) => {
+        const navItems = [
+            { id: 'dashboard', label: 'Dashboard', icon: Icons.Dashboard },
+            { id: 'contacts', label: 'Contacts', icon: Icons.Users },
+            { id: 'companies', label: 'Companies', icon: Icons.Building },
+            { id: 'deals', label: 'Deals', icon: Icons.Currency },
+            { id: 'tasks', label: 'Tasks', icon: Icons.Task },
+            { id: 'settings', label: 'Settings', icon: Icons.Settings },
+        ];
+
+        return (
+            <aside className={`fixed left-0 top-0 h-full bg-white border-r border-slate-200 z-40 transition-all duration-300 ${collapsed ? 'w-20' : 'w-64'}`}>
+                <div className="h-full flex flex-col">
+                    <div className="h-16 flex items-center px-6 border-b border-slate-100">
+                        <div className="flex items-center gap-3">
+                            <div className="w-10 h-10 bg-gradient-to-br from-primary-600 to-primary-700 rounded-xl flex items-center justify-center">
+                                <span className="text-white font-bold text-lg">N</span>
+                            </div>
+                            {!collapsed && <span className="font-bold text-xl text-slate-900">Nexus</span>}
+                        </div>
+                    </div>
+                    <nav className="flex-1 py-4 px-3 space-y-1 overflow-y-auto">
+                        {navItems.map(item => (
+                            <button key={item.id} onClick={() => setActiveView(item.id)}
+                                    className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-lg font-medium transition-all ${activeView === item.id ? 'bg-primary-50 text-primary-700' : 'text-slate-600 hover:bg-slate-50'}`}>
+                                <item.icon />
+                                {!collapsed && <span>{item.label}</span>}
+                            </button>
+                        ))}
+                    </nav>
+                    <div className="p-4 border-t border-slate-100">
+                        <div className="flex items-center gap-3">
+                            <div className="w-10 h-10 bg-gradient-to-br from-emerald-500 to-emerald-600 rounded-full flex items-center justify-center text-white font-semibold">
+                                AU
+                            </div>
+                            {!collapsed && (
+                                <div>
+                                    <p className="font-medium text-slate-900 text-sm">Admin User</p>
+                                    <p className="text-xs text-slate-500">admin@nexus.com</p>
+                                </div>
+                            )}
+                        </div>
+                    </div>
+                </div>
+            </aside>
+        );
+    };
+
+    // Main App Component
+    const App = () => {
+        const [activeView, setActiveView] = useState('dashboard');
+        const [contacts, setContacts] = useState(initialContacts);
+        const [companies, setCompanies] = useState(initialCompanies);
+        const [deals, setDeals] = useState(initialDeals);
+        const [tasks, setTasks] = useState(initialTasks);
+        const [toast, setToast] = useState(null);
+        const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
+
+        const showToast = (message, type = 'success') => {
+            setToast({ message, type });
+        };
+
+        const handleSaveContact = (contact) => {
+            const exists = contacts.find(c => c.id === contact.id);
+            if (exists) {
+                setContacts(contacts.map(c => c.id === contact.id ? contact : c));
+                showToast('Contact updated successfully');
+            } else {
+                setContacts([...contacts, contact]);
+                showToast('Contact added successfully');
+            }
+        };
+
+        const handleDeleteContact = (id) => {
+            setContacts(contacts.filter(c => c.id !== id));
+            showToast('Contact deleted', 'info');
+        };
+
+        const handleSaveCompany = (company) => {
+            const exists = companies.find(c => c.id === company.id);
+            if (exists) {
+                setCompanies(companies.map(c => c.id === company.id ? company : c));
+                showToast('Company updated successfully');
+            } else {
+                setCompanies([...companies, company]);
+                showToast('Company added successfully');
+            }
+        };
+
+        const handleDeleteCompany = (id) => {
+            setCompanies(companies.filter(c => c.id !== id));
+            showToast('Company deleted', 'info');
+        };
+
+        const handleSaveDeal = (deal) => {
+            const exists = deals.find(d => d.id === deal.id);
+            if (exists) {
+                setDeals(deals.map(d => d.id === deal.id ? deal : d));
+                showToast('Deal updated successfully');
+            } else {
+                setDeals([...deals, deal]);
+                showToast('Deal added successfully');
+            }
+        };
+
+        const handleDeleteDeal = (id) => {
+            setDeals(deals.filter(d => d.id !== id));
+            showToast('Deal deleted', 'info');
+        };
+
+        const handleSaveTask = (task) => {
+            const exists = tasks.find(t => t.id === task.id);
+            if (exists) {
+                setTasks(tasks.map(t => t.id === task.id ? task : t));
+                showToast('Task updated successfully');
+            } else {
+                setTasks([...tasks, task]);
+                showToast('Task added successfully');
+            }
+        };
+
+        const handleDeleteTask = (id) => {
+            setTasks(tasks.filter(t => t.id !== id));
+            showToast('Task deleted', 'info');
+        };
+
+        const renderView = () => {
+            switch (activeView) {
+                case 'dashboard': return <Dashboard contacts={contacts} deals={deals} tasks={tasks} />;
+                case 'contacts': return <ContactsView contacts={contacts} onSave={handleSaveContact} onDelete={handleDeleteContact} />;
+                case 'companies': return <CompaniesView companies={companies} onSave={handleSaveCompany} onDelete={handleDeleteCompany} />;
+                case 'deals': return <DealsView deals={deals} contacts={contacts} onSave={handleSaveDeal} onDelete={handleDeleteDeal} />;
+                case 'tasks': return <TasksView tasks={tasks} contacts={contacts} onSave={handleSaveTask} onDelete={handleDeleteTask} />;
+                case 'settings': return <SettingsView />;
+                default: return <Dashboard contacts={contacts} deals={deals} tasks={tasks} />;
+            }
+        };
+
+        return (
+            <div className="min-h-screen bg-slate-50">
+                <Sidebar activeView={activeView} setActiveView={setActiveView} collapsed={sidebarCollapsed} />
+                <main className={`transition-all duration-300 ${sidebarCollapsed ? 'ml-20' : 'ml-64'}`}>
+                    <div className="p-6 lg:p-8">
+                        {renderView()}
+                    </div>
+                </main>
+                {toast && <Toast message={toast.message} type={toast.type} onClose={() => setToast(null)} />}
+            </div>
+        );
+    };
+
+    // Render the app
+    const root = ReactDOM.createRoot(document.getElementById('root'));
+    root.render(<App />);
+</script>
+
+<script>
+    /**
+     * Iframe 元素高亮注入脚本
+     * 需要在目标网站中引入此脚本来支持跨域 iframe 高亮功能
+     *
+     * 使用方法：
+     * 1. 将此脚本添加到目标网站的 HTML 中
+     * 2. 或通过浏览器扩展、用户脚本等方式注入
+     */
+
+    (function () {
+        "use strict";
+
+        // 检查是否在 iframe 中
+        if (window.self === window.top) {
+            return; // 不在 iframe 中，不执行
+        }
+
+        // 检查是否已经初始化过
+        if (window.__iframeHighlightInitialized) {
+            return;
+        }
+        window.__iframeHighlightInitialized = true;
+        console.log("Iframe 高亮脚本已加载");
+
+        // 创建高亮覆盖层
+        var overlay = document.createElement("div");
+        overlay.id = "iframe-highlight-overlay";
+        overlay.style.cssText = "\n    position: fixed;\n    top: 0;\n    left: 0;\n    width: 100vw;\n    height: 100vh;\n    pointer-events: none;\n    z-index: 999999;\n    overflow: hidden;\n  ";
+
+        // 创建悬停高亮框（虚线边框）
+        var highlightBox = document.createElement("div");
+        highlightBox.id = "iframe-highlight-box";
+        highlightBox.style.cssText = "\n    position: absolute;\n    border: 2px dashed #007AFF;\n    background: rgba(0, 122, 255, 0.08);\n    pointer-events: none;\n    display: none;\n    transition: all 0.1s ease;\n    box-shadow: 0 0 0 1px rgba(255, 255, 255, 0.8);\n    border-radius: 2px;\n  ";
+
+        // 创建选中节点的常驻高亮框（实线边框）
+        var selectedBox = document.createElement("div");
+        selectedBox.id = "iframe-selected-box";
+        selectedBox.style.cssText = "\n    position: absolute;\n    border: 2px solid #007AFF;\n    pointer-events: none;\n    display: none;\n    box-shadow: 0 0 0 1px rgba(255, 255, 255, 0.9), 0 0 8px rgba(255, 107, 53, 0.4);\n    border-radius: 2px;\n    z-index: 1000000;\n  ";
+
+        // 创建悬停标签显示
+        var tagLabel = document.createElement("div");
+        tagLabel.id = "iframe-tag-label";
+        tagLabel.style.cssText = "\n    position: absolute;\n    background: #007AFF;\n    color: white;\n    padding: 2px 6px;\n    font-size: 11px;\n    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;\n    border-radius: 2px;\n    pointer-events: none;\n    display: none;\n    white-space: nowrap;\n    z-index: 1000001;\n    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.3);\n    font-weight: 500;\n  ";
+
+        // 创建选中节点标签
+        var selectedLabel = document.createElement("div");
+        selectedLabel.id = "iframe-selected-label";
+        selectedLabel.style.cssText = "\n    position: absolute;\n    background: #007AFF;\n    color: white;\n    padding: 3px 8px;\n    font-size: 11px;\n    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;\n    border-radius: 3px;\n    pointer-events: none;\n    display: none;\n    white-space: nowrap;\n    z-index: 1000002;\n    box-shadow: 0 2px 6px rgba(0, 0, 0, 0.4);\n    font-weight: 600;\n  ";
+        overlay.appendChild(highlightBox);
+        overlay.appendChild(selectedBox);
+        overlay.appendChild(tagLabel);
+        overlay.appendChild(selectedLabel);
+        document.body.appendChild(overlay);
+
+        // 存储当前选中的元素
+        var selectedElement = null;
+        var highlightEnabled = false;
+
+        // 更新选中元素的高亮显示
+        function updateSelectedHighlight(element) {
+            console.log("updateSelectedHighlight called with:", element);
+            if (!element) {
+                selectedBox.style.display = "none";
+                selectedLabel.style.display = "none";
+                selectedElement = null;
+                console.log("Cleared selected highlight");
+                return;
+            }
+            selectedElement = element;
+            var rect = element.getBoundingClientRect();
+            console.log("Selected element rect:", rect);
+
+            // 更新选中高亮框位置
+            selectedBox.style.display = "block";
+            selectedBox.style.left = "".concat(rect.left - 2, "px");
+            selectedBox.style.top = "".concat(rect.top - 2, "px");
+            selectedBox.style.width = "".concat(rect.width + 4, "px");
+            selectedBox.style.height = "".concat(rect.height + 4, "px");
+
+            // 更新选中标签位置和内容
+            selectedLabel.style.display = "block";
+            selectedLabel.textContent = "\u2713 <".concat(element.tagName.toLowerCase(), ">");
+
+            // 计算标签位置，确保不超出视窗
+            var labelTop = rect.top - 28;
+            var labelLeft = rect.left;
+
+            // 如果标签会超出顶部，显示在元素下方
+            if (labelTop < 5) {
+                labelTop = rect.bottom + 5;
+            }
+
+            // 如果标签会超出右侧，向左调整
+            var labelWidth = selectedLabel.offsetWidth || 100; // 预估宽度
+            if (labelLeft + labelWidth > window.innerWidth - 10) {
+                labelLeft = window.innerWidth - labelWidth - 10;
+            }
+            selectedLabel.style.left = "".concat(Math.max(5, labelLeft), "px");
+            selectedLabel.style.top = "".concat(labelTop, "px");
+            console.log("Selected highlight positioned at:", {
+                left: selectedBox.style.left,
+                top: selectedBox.style.top,
+                width: selectedBox.style.width,
+                height: selectedBox.style.height
+            });
+        }
+        function getElementSelector(element) {
+            if (!(element instanceof Element)) throw new Error('Argument must be a DOM element');
+            var segments = [];
+            var current = element;
+            while (current !== document.documentElement) {
+                var selector = '';
+                // 优先检查唯一ID
+                if (current.id && document.querySelectorAll("#".concat(current.id)).length === 1) {
+                    segments.unshift("#".concat(current.id));
+                    break; // ID唯一，无需继续向上
+                }
+
+                // 生成类名选择器（取第一个有效类名）
+                var classes = Array.from(current.classList).filter(function (c) {
+                    return !c.startsWith('js-');
+                });
+                var className = classes.length > 0 ? ".".concat(classes[0]) : '';
+
+                // 生成位置索引（nth-child）
+                var tag = current.tagName.toLowerCase();
+                if (!className) {
+                    var siblings = Array.from(current.parentNode.children);
+                    var index = siblings.findIndex(function (el) {
+                        return el === current;
+                    }) + 1;
+                    selector = "".concat(tag, ":nth-child(").concat(index, ")");
+                } else {
+                    selector = className;
+                }
+                segments.unshift(selector);
+                current = current.parentElement;
+            }
+
+            // 处理根元素
+            if (current === document.documentElement) {
+                segments.unshift('html');
+            }
+            return segments.join(' > ');
+        }
+
+        // 获取元素文本内容
+        function getElementText(element) {
+            var _element$textContent;
+            if (element.tagName === "INPUT") {
+                return element.value || element.placeholder || "";
+            }
+            if (element.tagName === "TEXTAREA") {
+                return element.value || element.placeholder || "";
+            }
+            var text = ((_element$textContent = element.textContent) === null || _element$textContent === void 0 ? void 0 : _element$textContent.trim()) || "";
+            return text.length > 50 ? text.substring(0, 50) + "..." : text;
+        }
+
+        // 获取元素属性信息
+        function getElementAttributes(element) {
+            var attrs = {};
+            for (var i = 0; i < element.attributes.length; i++) {
+                var attr = element.attributes[i];
+                attrs[attr.name] = attr.value;
+            }
+            return attrs;
+        }
+
+        // 鼠标悬停事件处理
+        function handleMouseOver(e) {
+            if (!highlightEnabled) return;
+            var target = e.target;
+            if (!target || target === overlay || target === highlightBox || target === tagLabel || target === selectedBox || target === selectedLabel) {
+                return;
+            }
+
+            // 避免高亮 html 和 body 元素
+            if (target === document.documentElement || target === document.body) {
+                return;
+            }
+
+            // 如果是已选中的元素，不显示悬停高亮
+            if (target === selectedElement) {
+                highlightBox.style.display = "none";
+                tagLabel.style.display = "none";
+                return;
+            }
+            var rect = target.getBoundingClientRect();
+            var selector = getElementSelector(target);
+            var text = getElementText(target);
+            var attributes = getElementAttributes(target);
+
+            // 更新悬停高亮框位置
+            highlightBox.style.display = "block";
+            highlightBox.style.left = "".concat(rect.left - 2, "px");
+            highlightBox.style.top = "".concat(rect.top - 2, "px");
+            highlightBox.style.width = "".concat(rect.width + 4, "px");
+            highlightBox.style.height = "".concat(rect.height + 4, "px");
+
+            // 更新标签位置和内容
+            tagLabel.style.display = "block";
+            tagLabel.textContent = "<".concat(target.tagName.toLowerCase(), ">");
+
+            // 计算标签位置，确保不超出视窗
+            var labelTop = rect.top - 22;
+            var labelLeft = rect.left;
+
+            // 如果标签会超出顶部，显示在元素下方
+            if (labelTop < 0) {
+                labelTop = rect.bottom + 5;
+            }
+
+            // 如果标签会超出右侧，向左调整
+            if (labelLeft + tagLabel.offsetWidth > window.innerWidth) {
+                labelLeft = window.innerWidth - tagLabel.offsetWidth - 5;
+            }
+            tagLabel.style.left = "".concat(Math.max(0, labelLeft), "px");
+            tagLabel.style.top = "".concat(labelTop, "px");
+
+            // 发送消息到父窗口
+            var elementInfo = {
+                tagName: target.tagName.toLowerCase(),
+                rect: {
+                    left: rect.left,
+                    top: rect.top,
+                    right: rect.right,
+                    bottom: rect.bottom,
+                    width: rect.width,
+                    height: rect.height,
+                    x: rect.x,
+                    y: rect.y
+                },
+                selector: selector,
+                text: text,
+                attributes: attributes,
+                url: window.location.href,
+                path: window.location.pathname,
+                timestamp: Date.now()
+            };
+            try {
+                window.parent.postMessage({
+                    type: "iframe-element-hover",
+                    data: elementInfo,
+                    source: "iframe-highlight-injector"
+                }, "*");
+            } catch (error) {
+                console.warn("无法发送消息到父窗口:", error);
+            }
+        }
+
+        // 鼠标离开事件处理
+        function handleMouseOut(e) {
+            if (!highlightEnabled) return;
+            var relatedTarget = e.relatedTarget;
+
+            // 如果鼠标移动到高亮相关元素上，不隐藏高亮
+            if (relatedTarget && (relatedTarget === highlightBox || relatedTarget === tagLabel || relatedTarget === overlay || relatedTarget === selectedBox || relatedTarget === selectedLabel)) {
+                return;
+            }
+            highlightBox.style.display = "none";
+            tagLabel.style.display = "none";
+            try {
+                window.parent.postMessage({
+                    type: "iframe-element-hover",
+                    data: null,
+                    source: "iframe-highlight-injector"
+                }, "*");
+            } catch (error) {
+                console.warn("无法发送消息到父窗口:", error);
+            }
+        }
+
+        // 点击事件处理
+        function handleClick(e) {
+            var target = e.target;
+            if (!target || target === overlay || target === highlightBox || target === tagLabel || target === selectedBox || target === selectedLabel) {
+                return;
+            }
+
+            // 避免处理 html 和 body 元素
+            if (target === document.documentElement || target === document.body) {
+                return;
+            }
+
+            // 检查是否是交互元素，这些元素需要保留默认行为
+            var isInteractiveElement = ['input', 'textarea', 'select', 'button', 'a'].includes(target.tagName.toLowerCase());
+
+            // 如果高亮功能启用，对于非交互元素阻止默认行为和事件传播
+            if (highlightEnabled) {
+                e.preventDefault();
+                e.stopPropagation();
+            }
+            var rect = target.getBoundingClientRect();
+            var selector = getElementSelector(target);
+            var text = getElementText(target);
+            var attributes = getElementAttributes(target);
+            console.log("Element clicked:", {
+                tagName: target.tagName,
+                selector: selector,
+                rect: rect
+            });
+
+            // 立即更新选中高亮
+            updateSelectedHighlight(target);
+
+            // 隐藏悬停高亮，因为现在是选中状态
+            highlightBox.style.display = "none";
+            tagLabel.style.display = "none";
+            var elementInfo = {
+                tagName: target.tagName.toLowerCase(),
+                rect: {
+                    left: rect.left,
+                    top: rect.top,
+                    right: rect.right,
+                    bottom: rect.bottom,
+                    width: rect.width,
+                    height: rect.height,
+                    x: rect.x,
+                    y: rect.y
+                },
+                selector: selector,
+                text: text,
+                attributes: attributes,
+                url: window.location.href,
+                path: window.location.pathname,
+                timestamp: Date.now()
+            };
+            try {
+                window.parent.postMessage({
+                    type: "iframe-element-click",
+                    data: elementInfo,
+                    source: "iframe-highlight-injector"
+                }, "*");
+            } catch (error) {
+                console.warn("无法发送消息到父窗口:", error);
+            }
+        }
+
+        // 监听来自父窗口的消息
+        function handleParentMessage(event) {
+            console.log("Received message from parent:", event.data);
+            if (event.data.type === "iframe-highlight-toggle") {
+                var enabled = event.data.enabled;
+                console.log("Highlight toggle:", enabled);
+                if (enabled) {
+                    enableHighlight();
+                } else {
+                    disableHighlight();
+                }
+            } else if (event.data.type === "enable-iframe-highlight") {
+                console.log("Enable iframe highlight");
+                enableHighlight();
+            } else if (event.data.type === "disable-iframe-highlight") {
+                console.log("Disable iframe highlight");
+                disableHighlight();
+            } else if (event.data.type === "toggle-iframe-highlight") {
+                var _enabled = event.data.enabled !== undefined ? event.data.enabled : !highlightEnabled;
+                console.log("Toggle iframe highlight to:", _enabled);
+                if (_enabled) {
+                    enableHighlight();
+                } else {
+                    disableHighlight();
+                }
+            } else if (event.data.type === "update-selected-element") {
+                var selector = event.data.selector;
+                console.log("Update selected element with selector:", selector);
+                if (selector) {
+                    try {
+                        var element = document.querySelector(selector);
+                        console.log("Found element by selector:", element);
+                        updateSelectedHighlight(element);
+                    } catch (error) {
+                        console.warn("Failed to select element:", error);
+                        updateSelectedHighlight(null);
+                    }
+                } else {
+                    updateSelectedHighlight(null);
+                }
+            } else if (event.data.type === "clear-selected-element") {
+                console.log("Clear selected element");
+                updateSelectedHighlight(null);
+            }
+        }
+
+        // 启用高亮功能
+        function enableHighlight() {
+            console.log("Enabling highlight");
+            document.addEventListener("mouseover", handleMouseOver, true);
+            document.addEventListener("mouseout", handleMouseOut, true);
+            document.addEventListener("click", handleClick, true);
+            highlightEnabled = true;
+            overlay.style.display = "block";
+        }
+
+        // 禁用高亮功能
+        function disableHighlight() {
+            console.log("Disabling highlight");
+            highlightEnabled = false;
+            // 保持事件监听器，但通过 highlightEnabled 变量控制行为
+            // 这样可以保留选中状态的显示
+            highlightBox.style.display = "none";
+            tagLabel.style.display = "none";
+            // 不隐藏 selectedBox 和 selectedLabel，保留选中状态
+        }
+
+        // 完全禁用高亮功能（移除所有监听器）
+        function fullyDisableHighlight() {
+            console.log("Fully disabling highlight");
+            highlightEnabled = false;
+            document.removeEventListener("mouseover", handleMouseOver, true);
+            document.removeEventListener("mouseout", handleMouseOut, true);
+            document.removeEventListener("click", handleClick, true);
+            overlay.style.display = "none";
+            highlightBox.style.display = "none";
+            tagLabel.style.display = "none";
+            selectedBox.style.display = "none";
+            selectedLabel.style.display = "none";
+        }
+
+        // 添加事件监听
+        enableHighlight();
+        window.addEventListener("message", handleParentMessage);
+
+        // 暴露全局函数供外部调用
+        window.__iframeHighlightControl = {
+            enable: enableHighlight,
+            disable: disableHighlight,
+            fullyDisable: fullyDisableHighlight,
+            isEnabled: function isEnabled() {
+                return highlightEnabled;
+            },
+            getSelectedElement: function getSelectedElement() {
+                return selectedElement;
+            },
+            updateSelected: updateSelectedHighlight,
+            // 通过消息发送开关控制
+            sendToggleMessage: function sendToggleMessage(enabled) {
+                window.parent.postMessage({
+                    type: 'iframe-highlight-status',
+                    enabled: enabled || highlightEnabled,
+                    source: 'iframe-highlight-injector'
+                }, '*');
+            }
+        };
+
+        // 通知父窗口脚本已加载
+        try {
+            window.parent.postMessage({
+                type: "iframe-highlight-ready",
+                data: {
+                    url: window.location.href,
+                    userAgent: navigator.userAgent,
+                    timestamp: Date.now()
+                },
+                source: "iframe-highlight-injector"
+            }, "*");
+        } catch (error) {
+            console.warn("无法发送就绪消息到父窗口:", error);
+        }
+
+        // 清理函数
+        window.__iframeHighlightCleanup = function () {
+            fullyDisableHighlight();
+            window.removeEventListener("message", handleParentMessage);
+            if (overlay.parentElement) {
+                overlay.parentElement.removeChild(overlay);
+            }
+            delete window.__iframeHighlightInitialized;
+            delete window.__iframeHighlightCleanup;
+        };
+    })();
+
+</script>
+</body>
+</html>
