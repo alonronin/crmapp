@@ -4,7 +4,7 @@
 
 ## Highlights
 
-- Same prompt, 12 different AI models, 12 unique CRM implementations
+- Same prompt, 13 different AI models, 13 unique CRM implementations
 - Each result is a **single HTML file** -- no build tools, no dependencies
 - Side-by-side comparison of how models approach UI, architecture, and design
 - Live demo hosted on Vercel
@@ -33,6 +33,7 @@ Each model produces a fully functional CRM application in a single `index.html` 
 | DeepSeek R3 | DeepSeek | `models/deepseek-r3/` |
 | Kimi K2 | Moonshot AI | `models/kimi-k2/` |
 | GPT OSS 120B | OpenAI | `models/gpt-oss-120b/` |
+| Mimo 2.5 Pro | Xiaomi | `models/mimo-25-pro/` |
 
 Each model directory contains an `index.html` (the CRM output) and a `meta.json` with model metadata.
 
