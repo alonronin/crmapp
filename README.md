@@ -34,6 +34,7 @@ Each model produces a fully functional CRM application in a single `index.html` 
 | Kimi K2 | Moonshot AI | `models/kimi-k2/` |
 | GPT OSS 120B | OpenAI | `models/gpt-oss-120b/` |
 | Mimo 2.5 Pro | Xiaomi | `models/mimo-25-pro/` |
+| Kimi K3 | Moonshot AI | `models/kimi-k3/` |
 
 Each model directory contains an `index.html` (the CRM output) and a `meta.json` with model metadata.
 
