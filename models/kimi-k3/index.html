@@ -1,0 +1,410 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Nexus CRM</title>
+<script src="https://cdn.tailwindcss.com"></script>
+<script crossorigin src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
+<script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
+<script src="https://unpkg.com/@babel/standalone@7/babel.min.js"></script>
+<style>
+  body { font-family: ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, sans-serif; }
+  ::-webkit-scrollbar { width: 6px; height: 6px; }
+  ::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 3px; }
+</style>
+</head>
+<body class="bg-slate-100">
+<div id="root"></div>
+
+<script type="text/babel" data-presets="react">
+const { useState, useMemo } = React;
+
+/* ---------- Seed data ---------- */
+const STAGES = ["Lead", "Qualified", "Proposal", "Negotiation", "Won", "Lost"];
+const STAGE_COLORS = {
+  Lead: "bg-slate-200 text-slate-700",
+  Qualified: "bg-blue-100 text-blue-700",
+  Proposal: "bg-violet-100 text-violet-700",
+  Negotiation: "bg-amber-100 text-amber-700",
+  Won: "bg-emerald-100 text-emerald-700",
+  Lost: "bg-rose-100 text-rose-700",
+};
+
+const seedContacts = [
+  { id: 1, name: "Maya Cohen", email: "maya@acme.io", phone: "+1 415-555-0132", company: "Acme Corp", status: "Customer", tags: ["enterprise"] },
+  { id: 2, name: "Daniel Ross", email: "daniel@globex.com", phone: "+1 212-555-0187", company: "Globex", status: "Lead", tags: ["inbound"] },
+  { id: 3, name: "Sara Lindqvist", email: "sara@nordwind.se", phone: "+46 70 555 0119", company: "Nordwind AB", status: "Lead", tags: ["referral"] },
+  { id: 4, name: "Tom Becker", email: "tom@initech.dev", phone: "+1 628-555-0144", company: "Initech", status: "Customer", tags: ["saas", "vip"] },
+  { id: 5, name: "Priya Nair", email: "priya@umbrella.co", phone: "+44 20 7946 0321", company: "Umbrella Ltd", status: "Churned", tags: [] },
+  { id: 6, name: "Leo Martins", email: "leo@stellar.io", phone: "+55 11 9555 0178", company: "Stellar", status: "Lead", tags: ["outbound"] },
+];
+
+const seedDeals = [
+  { id: 1, title: "Acme annual license", company: "Acme Corp", value: 48000, stage: "Negotiation", owner: "AV" },
+  { id: 2, title: "Globex pilot", company: "Globex", value: 9000, stage: "Qualified", owner: "JR" },
+  { id: 3, title: "Nordwind rollout", company: "Nordwind AB", value: 26500, stage: "Proposal", owner: "AV" },
+  { id: 4, title: "Initech expansion", company: "Initech", value: 15000, stage: "Won", owner: "MK" },
+  { id: 5, title: "Stellar intro deal", company: "Stellar", value: 5200, stage: "Lead", owner: "JR" },
+  { id: 6, title: "Umbrella renewal", company: "Umbrella Ltd", value: 12000, stage: "Lost", owner: "MK" },
+];
+
+const seedTasks = [
+  { id: 1, title: "Send proposal to Nordwind", due: "2026-07-27", done: false, priority: "High", contactId: 3 },
+  { id: 2, title: "Quarterly review call with Acme", due: "2026-07-29", done: false, priority: "Medium", contactId: 1 },
+  { id: 3, title: "Follow up with Stellar", due: "2026-07-26", done: false, priority: "High", contactId: 6 },
+  { id: 4, title: "Update Globex pilot deck", due: "2026-08-01", done: true, priority: "Low", contactId: 2 },
+];
+
+/* ---------- Small components ---------- */
+const Badge = ({ color, children }) => (
+  <span className={`px-2 py-0.5 rounded-full text-xs font-medium ${color}`}>{children}</span>
+);
+
+const Avatar = ({ name }) => {
+  const initials = name.split(" ").map(w => w[0]).slice(0, 2).join("").toUpperCase();
+  return (
+    <div className="w-8 h-8 rounded-full bg-indigo-100 text-indigo-700 flex items-center justify-center text-xs font-semibold shrink-0">
+      {initials}
+    </div>
+  );
+};
+
+const StatCard = ({ label, value, sub, accent }) => (
+  <div className="bg-white rounded-xl border border-slate-200 p-5">
+    <div className="text-sm text-slate-500">{label}</div>
+    <div className={`text-2xl font-bold mt-1 ${accent || "text-slate-900"}`}>{value}</div>
+    {sub && <div className="text-xs text-slate-400 mt-1">{sub}</div>}
+  </div>
+);
+
+const Modal = ({ title, onClose, children }) => (
+  <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4" onClick={onClose}>
+    <div className="bg-white rounded-xl shadow-xl w-full max-w-md" onClick={e => e.stopPropagation()}>
+      <div className="flex items-center justify-between px-5 py-4 border-b border-slate-200">
+        <h3 className="font-semibold text-slate-900">{title}</h3>
+        <button onClick={onClose} className="text-slate-400 hover:text-slate-600 text-xl leading-none">&times;</button>
+      </div>
+      <div className="p-5">{children}</div>
+    </div>
+  </div>
+);
+
+const inputCls = "w-full border border-slate-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500";
+const btnPrimary = "bg-indigo-600 hover:bg-indigo-700 text-white text-sm font-medium px-4 py-2 rounded-lg transition";
+const btnGhost = "border border-slate-300 hover:bg-slate-50 text-slate-700 text-sm font-medium px-4 py-2 rounded-lg transition";
+
+/* ---------- Pages ---------- */
+function Dashboard({ contacts, deals, tasks }) {
+  const open = deals.filter(d => d.stage !== "Won" && d.stage !== "Lost");
+  const pipeline = open.reduce((s, d) => s + d.value, 0);
+  const won = deals.filter(d => d.stage === "Won").reduce((s, d) => s + d.value, 0);
+  const pendingTasks = tasks.filter(t => !t.done).length;
+  const maxStage = Math.max(...STAGES.map(s => deals.filter(d => d.stage === s).reduce((a, d) => a + d.value, 0)), 1);
+
+  return (
+    <div className="space-y-6">
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+        <StatCard label="Contacts" value={contacts.length} sub={`${contacts.filter(c => c.status === "Customer").length} customers`} />
+        <StatCard label="Open pipeline" value={"$" + pipeline.toLocaleString()} sub={`${open.length} open deals`} accent="text-indigo-600" />
+        <StatCard label="Won revenue" value={"$" + won.toLocaleString()} accent="text-emerald-600" />
+        <StatCard label="Pending tasks" value={pendingTasks} accent="text-amber-600" />
+      </div>
+
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+        <div className="bg-white rounded-xl border border-slate-200 p-5">
+          <h3 className="font-semibold text-slate-900 mb-4">Pipeline by stage</h3>
+          <div className="space-y-3">
+            {STAGES.map(s => {
+              const v = deals.filter(d => d.stage === s).reduce((a, d) => a + d.value, 0);
+              return (
+                <div key={s}>
+                  <div className="flex justify-between text-xs text-slate-500 mb-1">
+                    <span>{s}</span><span>${v.toLocaleString()}</span>
+                  </div>
+                  <div className="h-2 bg-slate-100 rounded-full overflow-hidden">
+                    <div className="h-full bg-indigo-500 rounded-full" style={{ width: (v / maxStage * 100) + "%" }} />
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        </div>
+
+        <div className="bg-white rounded-xl border border-slate-200 p-5">
+          <h3 className="font-semibold text-slate-900 mb-4">Recent contacts</h3>
+          <div className="space-y-3">
+            {contacts.slice(0, 5).map(c => (
+              <div key={c.id} className="flex items-center gap-3">
+                <Avatar name={c.name} />
+                <div className="min-w-0">
+                  <div className="text-sm font-medium text-slate-900 truncate">{c.name}</div>
+                  <div className="text-xs text-slate-500 truncate">{c.company}</div>
+                </div>
+                <div className="ml-auto">
+                  <Badge color={c.status === "Customer" ? "bg-emerald-100 text-emerald-700" : c.status === "Churned" ? "bg-rose-100 text-rose-700" : "bg-blue-100 text-blue-700"}>{c.status}</Badge>
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function Contacts({ contacts, setContacts }) {
+  const [q, setQ] = useState("");
+  const [editing, setEditing] = useState(null); // null | {} new | contact
+  const empty = { name: "", email: "", phone: "", company: "", status: "Lead", tags: [] };
+  const [form, setForm] = useState(empty);
+
+  const filtered = useMemo(() => contacts.filter(c =>
+    [c.name, c.email, c.company, c.status].join(" ").toLowerCase().includes(q.toLowerCase())
+  ), [contacts, q]);
+
+  const openNew = () => { setForm(empty); setEditing({}); };
+  const openEdit = c => { setForm({ ...c }); setEditing(c); };
+  const save = () => {
+    if (!form.name.trim()) return;
+    if (editing.id) setContacts(contacts.map(c => c.id === editing.id ? { ...form, id: editing.id } : c));
+    else setContacts([...contacts, { ...form, id: Date.now() }]);
+    setEditing(null);
+  };
+  const remove = id => setContacts(contacts.filter(c => c.id !== id));
+
+  return (
+    <div className="bg-white rounded-xl border border-slate-200">
+      <div className="flex flex-wrap items-center gap-3 p-4 border-b border-slate-200">
+        <input className={inputCls + " max-w-xs"} placeholder="Search contacts…" value={q} onChange={e => setQ(e.target.value)} />
+        <button className={btnPrimary + " ml-auto"} onClick={openNew}>+ Add contact</button>
+      </div>
+      <div className="overflow-x-auto">
+        <table className="w-full text-sm">
+          <thead>
+            <tr className="text-left text-xs uppercase tracking-wide text-slate-500 border-b border-slate-200">
+              <th className="px-4 py-3">Name</th><th className="px-4 py-3">Company</th>
+              <th className="px-4 py-3">Email</th><th className="px-4 py-3">Phone</th>
+              <th className="px-4 py-3">Status</th><th className="px-4 py-3 text-right">Actions</th>
+            </tr>
+          </thead>
+          <tbody>
+            {filtered.map(c => (
+              <tr key={c.id} className="border-b border-slate-100 hover:bg-slate-50">
+                <td className="px-4 py-3">
+                  <div className="flex items-center gap-3"><Avatar name={c.name} /><span className="font-medium text-slate-900">{c.name}</span></div>
+                </td>
+                <td className="px-4 py-3 text-slate-600">{c.company}</td>
+                <td className="px-4 py-3 text-slate-600">{c.email}</td>
+                <td className="px-4 py-3 text-slate-600">{c.phone}</td>
+                <td className="px-4 py-3">
+                  <Badge color={c.status === "Customer" ? "bg-emerald-100 text-emerald-700" : c.status === "Churned" ? "bg-rose-100 text-rose-700" : "bg-blue-100 text-blue-700"}>{c.status}</Badge>
+                </td>
+                <td className="px-4 py-3 text-right whitespace-nowrap">
+                  <button className="text-indigo-600 hover:underline mr-3" onClick={() => openEdit(c)}>Edit</button>
+                  <button className="text-rose-600 hover:underline" onClick={() => remove(c.id)}>Delete</button>
+                </td>
+              </tr>
+            ))}
+            {filtered.length === 0 && <tr><td colSpan="6" className="px-4 py-8 text-center text-slate-400">No contacts found</td></tr>}
+          </tbody>
+        </table>
+      </div>
+
+      {editing && (
+        <Modal title={editing.id ? "Edit contact" : "New contact"} onClose={() => setEditing(null)}>
+          <div className="space-y-3">
+            <input className={inputCls} placeholder="Full name" value={form.name} onChange={e => setForm({ ...form, name: e.target.value })} />
+            <input className={inputCls} placeholder="Email" value={form.email} onChange={e => setForm({ ...form, email: e.target.value })} />
+            <input className={inputCls} placeholder="Phone" value={form.phone} onChange={e => setForm({ ...form, phone: e.target.value })} />
+            <input className={inputCls} placeholder="Company" value={form.company} onChange={e => setForm({ ...form, company: e.target.value })} />
+            <select className={inputCls} value={form.status} onChange={e => setForm({ ...form, status: e.target.value })}>
+              <option>Lead</option><option>Customer</option><option>Churned</option>
+            </select>
+            <div className="flex justify-end gap-2 pt-2">
+              <button className={btnGhost} onClick={() => setEditing(null)}>Cancel</button>
+              <button className={btnPrimary} onClick={save}>Save</button>
+            </div>
+          </div>
+        </Modal>
+      )}
+    </div>
+  );
+}
+
+function Deals({ deals, setDeals }) {
+  const [editing, setEditing] = useState(null);
+  const empty = { title: "", company: "", value: 0, stage: "Lead", owner: "AV" };
+  const [form, setForm] = useState(empty);
+
+  const move = (id, dir) => {
+    setDeals(deals.map(d => {
+      if (d.id !== id) return d;
+      const i = STAGES.indexOf(d.stage);
+      const j = Math.min(Math.max(i + dir, 0), STAGES.length - 1);
+      return { ...d, stage: STAGES[j] };
+    }));
+  };
+  const openNew = () => { setForm(empty); setEditing({}); };
+  const save = () => {
+    if (!form.title.trim()) return;
+    if (editing.id) setDeals(deals.map(d => d.id === editing.id ? { ...form, value: +form.value, id: editing.id } : d));
+    else setDeals([...deals, { ...form, value: +form.value, id: Date.now() }]);
+    setEditing(null);
+  };
+
+  return (
+    <div>
+      <div className="flex justify-end mb-4">
+        <button className={btnPrimary} onClick={openNew}>+ Add deal</button>
+      </div>
+      <div className="flex gap-3 overflow-x-auto pb-4">
+        {STAGES.map(stage => {
+          const cards = deals.filter(d => d.stage === stage);
+          const total = cards.reduce((s, d) => s + d.value, 0);
+          return (
+            <div key={stage} className="w-64 shrink-0">
+              <div className="flex items-center justify-between mb-2 px-1">
+                <Badge color={STAGE_COLORS[stage]}>{stage}</Badge>
+                <span className="text-xs text-slate-500">${total.toLocaleString()}</span>
+              </div>
+              <div className="space-y-2 min-h-[60px] bg-slate-200/50 rounded-lg p-2">
+                {cards.map(d => (
+                  <div key={d.id} className="bg-white rounded-lg border border-slate-200 p-3 shadow-sm">
+                    <div className="text-sm font-medium text-slate-900">{d.title}</div>
+                    <div className="text-xs text-slate-500 mt-0.5">{d.company}</div>
+                    <div className="flex items-center justify-between mt-2">
+                      <span className="text-sm font-semibold text-indigo-600">${d.value.toLocaleString()}</span>
+                      <div className="flex items-center gap-1">
+                        <button title="Move back" className="w-6 h-6 rounded hover:bg-slate-100 text-slate-500" onClick={() => move(d.id, -1)}>‹</button>
+                        <button title="Edit" className="w-6 h-6 rounded hover:bg-slate-100 text-slate-500" onClick={() => { setForm({ ...d }); setEditing(d); }}>✎</button>
+                        <button title="Move forward" className="w-6 h-6 rounded hover:bg-slate-100 text-slate-500" onClick={() => move(d.id, 1)}>›</button>
+                      </div>
+                    </div>
+                  </div>
+                ))}
+                {cards.length === 0 && <div className="text-xs text-slate-400 text-center py-3">Empty</div>}
+              </div>
+            </div>
+          );
+        })}
+      </div>
+
+      {editing && (
+        <Modal title={editing.id ? "Edit deal" : "New deal"} onClose={() => setEditing(null)}>
+          <div className="space-y-3">
+            <input className={inputCls} placeholder="Deal title" value={form.title} onChange={e => setForm({ ...form, title: e.target.value })} />
+            <input className={inputCls} placeholder="Company" value={form.company} onChange={e => setForm({ ...form, company: e.target.value })} />
+            <input className={inputCls} type="number" placeholder="Value ($)" value={form.value} onChange={e => setForm({ ...form, value: e.target.value })} />
+            <select className={inputCls} value={form.stage} onChange={e => setForm({ ...form, stage: e.target.value })}>
+              {STAGES.map(s => <option key={s}>{s}</option>)}
+            </select>
+            <div className="flex justify-end gap-2 pt-2">
+              <button className={btnGhost} onClick={() => setEditing(null)}>Cancel</button>
+              <button className={btnPrimary} onClick={save}>Save</button>
+            </div>
+          </div>
+        </Modal>
+      )}
+    </div>
+  );
+}
+
+function Tasks({ tasks, setTasks, contacts }) {
+  const [title, setTitle] = useState("");
+  const [due, setDue] = useState("");
+  const add = () => {
+    if (!title.trim()) return;
+    setTasks([...tasks, { id: Date.now(), title, due: due || "2026-08-01", done: false, priority: "Medium", contactId: null }]);
+    setTitle(""); setDue("");
+  };
+  const toggle = id => setTasks(tasks.map(t => t.id === id ? { ...t, done: !t.done } : t));
+  const remove = id => setTasks(tasks.filter(t => t.id !== id));
+  const contactName = id => contacts.find(c => c.id === id)?.name;
+  const sorted = [...tasks].sort((a, b) => a.done - b.done || a.due.localeCompare(b.due));
+  const prColor = { High: "bg-rose-100 text-rose-700", Medium: "bg-amber-100 text-amber-700", Low: "bg-slate-200 text-slate-600" };
+
+  return (
+    <div className="bg-white rounded-xl border border-slate-200 max-w-3xl">
+      <div className="flex flex-wrap gap-2 p-4 border-b border-slate-200">
+        <input className={inputCls + " flex-1 min-w-[200px]"} placeholder="New task…" value={title}
+          onChange={e => setTitle(e.target.value)} onKeyDown={e => e.key === "Enter" && add()} />
+        <input className={inputCls + " w-40"} type="date" value={due} onChange={e => setDue(e.target.value)} />
+        <button className={btnPrimary} onClick={add}>Add</button>
+      </div>
+      <ul className="divide-y divide-slate-100">
+        {sorted.map(t => (
+          <li key={t.id} className="flex items-center gap-3 px-4 py-3">
+            <input type="checkbox" checked={t.done} onChange={() => toggle(t.id)} className="w-4 h-4 accent-indigo-600" />
+            <div className="min-w-0">
+              <div className={`text-sm ${t.done ? "line-through text-slate-400" : "text-slate-900"}`}>{t.title}</div>
+              <div className="text-xs text-slate-500">Due {t.due}{contactName(t.contactId) ? " · " + contactName(t.contactId) : ""}</div>
+            </div>
+            <div className="ml-auto flex items-center gap-3">
+              <Badge color={prColor[t.priority]}>{t.priority}</Badge>
+              <button className="text-rose-500 hover:text-rose-700" onClick={() => remove(t.id)}>✕</button>
+            </div>
+          </li>
+        ))}
+        {sorted.length === 0 && <li className="px-4 py-8 text-center text-slate-400 text-sm">No tasks</li>}
+      </ul>
+    </div>
+  );
+}
+
+/* ---------- App shell ---------- */
+const NAV = [
+  { key: "dashboard", label: "Dashboard", icon: "▦" },
+  { key: "contacts", label: "Contacts", icon: "👥" },
+  { key: "deals", label: "Deals", icon: "💼" },
+  { key: "tasks", label: "Tasks", icon: "✓" },
+];
+const TITLES = { dashboard: "Dashboard", contacts: "Contacts", deals: "Deals pipeline", tasks: "Tasks" };
+
+function App() {
+  const [page, setPage] = useState("dashboard");
+  const [contacts, setContacts] = useState(seedContacts);
+  const [deals, setDeals] = useState(seedDeals);
+  const [tasks, setTasks] = useState(seedTasks);
+
+  return (
+    <div className="flex min-h-screen">
+      <aside className="w-56 bg-slate-900 text-slate-300 flex flex-col shrink-0">
+        <div className="px-5 py-5 text-white font-bold text-lg flex items-center gap-2">
+          <span className="w-7 h-7 rounded-lg bg-indigo-500 flex items-center justify-center text-sm">N</span>
+          Nexus CRM
+        </div>
+        <nav className="flex-1 px-3 space-y-1">
+          {NAV.map(n => (
+            <button key={n.key} onClick={() => setPage(n.key)}
+              className={`w-full flex items-center gap-3 px-3 py-2 rounded-lg text-sm transition ${page === n.key ? "bg-indigo-600 text-white" : "hover:bg-slate-800"}`}>
+              <span>{n.icon}</span>{n.label}
+            </button>
+          ))}
+        </nav>
+        <div className="px-5 py-4 text-xs text-slate-500 border-t border-slate-800">v1.0 · demo data</div>
+      </aside>
+
+      <main className="flex-1 min-w-0">
+        <header className="bg-white border-b border-slate-200 px-6 py-4 flex items-center justify-between sticky top-0 z-10">
+          <h1 className="text-lg font-semibold text-slate-900">{TITLES[page]}</h1>
+          <div className="flex items-center gap-3">
+            <span className="text-sm text-slate-500 hidden sm:block">Alon Valadji</span>
+            <Avatar name="Alon Valadji" />
+          </div>
+        </header>
+        <div className="p-6">
+          {page === "dashboard" && <Dashboard contacts={contacts} deals={deals} tasks={tasks} />}
+          {page === "contacts" && <Contacts contacts={contacts} setContacts={setContacts} />}
+          {page === "deals" && <Deals deals={deals} setDeals={setDeals} />}
+          {page === "tasks" && <Tasks tasks={tasks} setTasks={setTasks} contacts={contacts} />}
+        </div>
+      </main>
+    </div>
+  );
+}
+
+ReactDOM.createRoot(document.getElementById("root")).render(<App />);
+</script>
+</body>
+</html>
